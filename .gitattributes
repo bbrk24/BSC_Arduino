@@ -1,0 +1,4 @@
+*.ino eol=crlf
+*.h   eol=crlf
+
+*.ms14 -text
