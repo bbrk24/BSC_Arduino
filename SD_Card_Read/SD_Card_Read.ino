@@ -1,6 +1,7 @@
 #include <SD.h>
+#include <SPI.h>
 
-const int chipSelectPin = 28;
+const int CHIP_SELECT_PIN = SDCARD_SS_PIN;
 
 void setup() {
   // put your setup code here, to run once:
@@ -8,10 +9,10 @@ void setup() {
   Serial.begin(9600);
 
   while (!Serial) {
-    Serial.print("Initializing SD card...");
+    
   }
 
-  if (!SD.begin(chipSelectPin)) {
+  if (!SD.begin(CHIP_SELECT_PIN)) {
     Serial.println("initialization failed. Things to check:");
 
     Serial.println("1. is a card inserted?");

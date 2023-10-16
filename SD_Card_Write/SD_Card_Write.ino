@@ -1,7 +1,10 @@
 #include <SD.h>
 #include <SPI.h>
+#include "Arduino.h"
 
 File rocketSDCard;
+
+const int SD_CARD_CHIP_SELECT = SDCARD_SS_PIN;
 
 void setup() {
   // Open serial communications and wait for port to open:
@@ -13,7 +16,7 @@ void setup() {
 
   Serial.print("Initializing SD card...");
 
-  if (!SD.begin(28)) {
+  if (!SD.begin(SD_CARD_CHIP_SELECT)) {
     Serial.println("initialization failed!");
     while (1);
   }
@@ -24,7 +27,7 @@ void setup() {
   rocketSDCard = SD.open("test.txt", FILE_WRITE);
 
   // if the file opened okay, write to it:
-  if (myFile) {
+  if (rocketSDCard) {
     Serial.print("Writing to test.txt...");
     rocketSDCard.println("testing 1, 2, 3.");
     // close the file:
