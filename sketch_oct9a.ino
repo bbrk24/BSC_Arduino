@@ -32,6 +32,9 @@ void setup() {
   // Pin D10: Error LED
   pinMode(10, PinMode::OUTPUT);
 
+  // Turn on the error LED until initialization finishes
+  digitalWrite(10, HIGH);
+
   // Initialize sensors
   altimeter::initialize();
   imu::initialize();
