@@ -5,8 +5,9 @@
 namespace imu {
 
 Adafruit_BNO08x _bno08x(5);
+
 // The altimeter is already using the default pins, so wire this somewhere else
-TwoWire _theI2C(/*sda:*/A6, /*scl:*/A7);
+TwoWire _theI2C(/*sda:*/6, /*scl:*/7);
 
 bool _registeredAccelerometer = false, _registeredGyroscope = false, _reasonableGravity = false;
 
@@ -91,7 +92,9 @@ bool getValues(sh2_Accelerometer_t* accel, sh2_Gyroscope_t* gyro) {
       return true;
     }
     // Otherwise, wait for the next sensor reading
-    while (!_bno08x.getSensorEvent(&value)) { /* This loop intentionally left blank */ }
+    while (!_bno08x.getSensorEvent(&value)) {
+      yield();
+    }
   }
 }
 
