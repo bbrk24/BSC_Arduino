@@ -25,7 +25,7 @@ enum status {
 /**
  * Check the sensor status.
  */
-status getStatus() {
+status getStatus() noexcept {
   if (!_registeredAccelerometer || !_registeredGyroscope) {
     if (_reasonableGravity) {
       // A reasonable value was read, but then the sensors were turned off.
@@ -101,7 +101,7 @@ bool getValues(sh2_Accelerometer_t* accel, sh2_Gyroscope_t* gyro) {
 /**
  * Get the magnitude of acceleration.
  */
-float getMagnitude(const sh2_Accelerometer_t& accel) {
+float getMagnitude(const sh2_Accelerometer_t& accel) noexcept {
   return sqrtf(accel.x * accel.x + accel.y * accel.y + accel.z * accel.z);
 }
 

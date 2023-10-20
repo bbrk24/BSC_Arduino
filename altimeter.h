@@ -19,7 +19,7 @@ enum status {
 /**
  * Check the sensor status.
  */
-status getStatus() {
+status getStatus() noexcept {
   if (!_begun) {
     return status::NOT_CONNECTED;
   }
@@ -51,7 +51,7 @@ void initialize() {
  */
 float getAltitude() {
   float meters = _baro.getAltitude();
-  const float FEET_PER_METER = 3.28F;
+  const float FEET_PER_METER = 3.28084F;
   return meters * FEET_PER_METER;
 }
 

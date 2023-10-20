@@ -1,3 +1,5 @@
+#if true
+
 #include "altimeter.h"
 #include "imu.h"
 
@@ -94,3 +96,5 @@ void loop() {
     updateStatusLEDs();
   }
 }
+
+#endif
