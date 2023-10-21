@@ -5,7 +5,7 @@
 #include "Buffer.h"
 
 void setup() {
-  pinMode(8, PinMode::OUTPUT);
+  pinMode(8, OUTPUT);
   digitalWrite(8, LOW);
   do {
     altimeter::initialize();

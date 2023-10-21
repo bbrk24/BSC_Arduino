@@ -11,24 +11,11 @@ void updateStatusLEDs() {
   digitalWrite(10, !good);
 }
 
-void goToSleep() {
-  imu::sleep();
-  digitalWrite(4, HIGH);
-}
-
-void wakeUp() {
-  imu::initialize();
-  digitalWrite(4, LOW);
-  updateStatusLEDs();
-}
-
 void setup() {
   Serial.begin(9600);
 
   // Pin A1: analog input from VOC sensor
   pinMode(A1, PinMode::INPUT);
-  // Pin D4: VOC enable
-  pinMode(4, PinMode::OUTPUT);
   // Pin D9: OK LED
   pinMode(9, PinMode::OUTPUT);
   // Pin D10: Error LED
@@ -40,7 +27,6 @@ void setup() {
   // Initialize sensors
   altimeter::initialize();
   imu::initialize();
-  digitalWrite(4, LOW);
   updateStatusLEDs();
 
   while (!Serial) { /* wait for serial port to connect */ }

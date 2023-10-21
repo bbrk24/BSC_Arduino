@@ -7,7 +7,14 @@ namespace imu {
 Adafruit_BNO08x _bno08x(5);
 
 // The altimeter is already using the default pins, so wire this somewhere else
-TwoWire _theI2C(/*sda:*/6, /*scl:*/7);
+TwoWire _theI2C(
+// difference between Nano and MKRZero
+#ifdef _SERCOM_CLASS_
+  &sercom5,
+#endif
+  /*sda:*/6,
+  /*scl:*/7
+);
 
 bool _registeredAccelerometer = false, _registeredGyroscope = false, _reasonableGravity = false;
 
