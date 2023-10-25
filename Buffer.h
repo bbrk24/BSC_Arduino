@@ -1,7 +1,7 @@
 #pragma once
 
 #ifndef BUFFER_SIZE
-#define BUFFER_SIZE 5
+#define BUFFER_SIZE 200
 #endif
 
 class Buffer {
@@ -16,14 +16,15 @@ public:
   bool isDecreasing() const noexcept {
     int firstIndex = (m_lastIndex + 1) % BUFFER_SIZE;
     int prevIndex = firstIndex;
+    int decCount = 0;
     for (int i = 1; i < BUFFER_SIZE; ++i) {
       int nextIndex = (firstIndex + i) % BUFFER_SIZE;
       if (m_data[prevIndex] > m_data[nextIndex]) {
-        return false;
+        ++decCount;
       }
       prevIndex = nextIndex;
     }
-    return true;
+    return decCount > BUFFER_SIZE/2;
   }
 private:
   float m_data[BUFFER_SIZE];

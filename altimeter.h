@@ -1,11 +1,13 @@
 #pragma once
 
-#include <Adafruit_MPL3115A2.h>
+#include <Adafruit_BMP3XX.h>
 
 namespace altimeter {
 
-Adafruit_MPL3115A2 _baro;
+Adafruit_BMP3XX _baro;
 bool _begun = false, _reasonable = false;
+
+float _seaLevel;
 
 enum status {
   /** I2C communications have not been established. */
@@ -34,14 +36,11 @@ status getStatus() noexcept {
  */
 void initialize() {
   if (!_begun) {
-    _begun = _baro.begin();
+    _begun = _baro.begin_I2C();
   }
   if (_begun && !_reasonable) {
-    float basePressure = _baro.getPressure();
-    _reasonable = basePressure >= 929.0F && basePressure <= 1041.0F;
-    if (_reasonable) {
-      _baro.setSeaPressure(basePressure);
-    }
+    _seaLevel = _baro.readPressure() / 100.0F;
+    _reasonable = _seaLevel >= 929.0F && _seaLevel <= 1041.0F;
   }
 }
 
@@ -50,7 +49,7 @@ void initialize() {
  * @return AGL in feet.
  */
 float getAltitude() {
-  float meters = _baro.getAltitude();
+  float meters = _baro.readAltitude(_seaLevel);
   const float FEET_PER_METER = 3.28084F;
   return meters * FEET_PER_METER;
 }

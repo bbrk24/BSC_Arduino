@@ -25,7 +25,7 @@ void loop() {
   switch (mode) {
   case BELOW_5K:
     delay(1000);
-    if (altimeter::getAltitude() >= 5000.0F) {
+    if (altimeter::getAltitude() >= 30.0F) {
       mode = WATCHING;
     }
     break;
