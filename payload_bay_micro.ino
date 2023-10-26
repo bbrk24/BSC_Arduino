@@ -4,12 +4,14 @@
 #include "altimeter.h"
 #include "Buffer.h"
 
+Altimeter alt;
+
 void setup() {
   pinMode(8, OUTPUT);
   digitalWrite(8, LOW);
   do {
-    altimeter::initialize();
-  } while (altimeter::getStatus() != altimeter::ACTIVE);
+    alt.initialize();
+  } while (alt.getStatus() != Altimeter::ACTIVE);
 }
 
 enum Mode {
@@ -25,12 +27,12 @@ void loop() {
   switch (mode) {
   case BELOW_5K:
     delay(1000);
-    if (altimeter::getAltitude() >= 30.0F) {
+    if (alt.getAltitude() >= 30.0F) {
       mode = WATCHING;
     }
     break;
   case WATCHING:
-    data.addPoint(altimeter::getAltitude());
+    data.addPoint(alt.getAltitude());
     if (data.isDecreasing()) {
       digitalWrite(8, HIGH);
       mode = PAST_APOGEE;

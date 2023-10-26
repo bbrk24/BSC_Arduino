@@ -3,10 +3,23 @@
 #include "altimeter.h"
 #include "imu.h"
 
+Altimeter alt;
+
+// The altimeter is already using the default pins, so wire this somewhere else
+static TwoWire imuI2C(
+// difference between Nano and MKRZero
+#ifdef _SERCOM_CLASS_
+  &sercom5,
+#endif
+  /*sda:*/6,
+  /*scl:*/7
+);
+IMU imu(&imuI2C, 5);
+
 void updateStatusLEDs() {
-  imu::status imuStatus = imu::getStatus();
-  altimeter::status altimeterStatus = altimeter::getStatus();
-  bool good = (altimeterStatus == altimeter::ACTIVE) && (imuStatus == imu::ASLEEP || imuStatus == imu::ACTIVE);
+  IMU::Status imuStatus = imu.getStatus();
+  Altimeter::Status altimeterStatus = alt.getStatus();
+  bool good = (altimeterStatus == Altimeter::ACTIVE) && (imuStatus == IMU::ASLEEP || imuStatus == IMU::ACTIVE);
   digitalWrite(9, good);
   digitalWrite(10, !good);
 }
@@ -25,8 +38,8 @@ void setup() {
   digitalWrite(10, HIGH);
 
   // Initialize sensors
-  altimeter::initialize();
-  imu::initialize();
+  alt.initialize();
+  imu.initialize();
   updateStatusLEDs();
 
   while (!Serial) { /* wait for serial port to connect */ }
@@ -41,7 +54,7 @@ void printAcceleration(const sh2_Accelerometer_t& accel) {
   Serial.print(accel.z);
   Serial.print(") - magnitude ");
 
-  float magnitude = imu::getMagnitude(accel);
+  float magnitude = IMU::getMagnitude(accel);
   Serial.print(magnitude);
 }
 
@@ -52,19 +65,19 @@ void loop() {
   Serial.print("VOC voltage: ");
   Serial.println(3.3F / 1023.0F * (float)v);
 
-  if (altimeter::getStatus() == altimeter::ACTIVE) {
-    float altitude = altimeter::getAltitude();
+  if (alt.getStatus() == Altimeter::ACTIVE) {
+    float altitude = alt.getAltitude();
     Serial.print("Altitude (feet): ");
     Serial.println(altitude);
   } else {
-    altimeter::initialize();
+    alt.initialize();
     updateStatusLEDs();
   }
 
-  if (imu::getStatus() == imu::ACTIVE) {
+  if (imu.getStatus() == IMU::ACTIVE) {
     sh2_Accelerometer_t accel;
     sh2_Gyroscope_t gyro;
-    if (imu::getValues(&accel, &gyro)) {
+    if (imu.getValues(&accel, &gyro)) {
       Serial.print("Acceleration (m/s^2): ");
       printAcceleration(accel);
       Serial.print("\nGyroscope (rad/s): (");
@@ -78,7 +91,7 @@ void loop() {
       Serial.println("No sensor value read");
     }
   } else {
-    imu::initialize();
+    imu.initialize();
     updateStatusLEDs();
   }
 }
