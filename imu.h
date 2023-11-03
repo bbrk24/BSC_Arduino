@@ -1,25 +1,29 @@
 #pragma once
 
-#include <Adafruit_BNO08x.h>
+#include <Adafruit_LSM9DS1.h>
 
 class IMU {
 private:
-  Adafruit_BNO08x m_bno08x;
-  TwoWire* m_i2c;
-  bool m_registeredAccelerometer;
-  bool m_registeredGyroscope;
+  Adafruit_LSM9DS1 m_sensor;
+  bool m_begun;
   bool m_reasonableGravity;
 public:
+  using vector3 = union {
+    float data[3];
+    struct {
+      float x;
+      float y;
+      float z;
+    };
+  };
+
   /**
    * @param[in] theI2C Pointer to a TwoWire instance representing the I2C interface. Must be valid
    * for the whole lifetime of the IMU instance.
-   * @param resetPin The pin on the Arduino connected to the IMU's reset pin. Use -1 if not connected.
    */
-  IMU(TwoWire* theI2C, int8_t resetPin = -1) :
-    m_bno08x(resetPin),
-    m_i2c(theI2C),
-    m_registeredAccelerometer(false),
-    m_registeredGyroscope(false),
+  IMU(TwoWire* theI2C) :
+    m_sensor(theI2C),
+    m_begun(false),
     m_reasonableGravity(false) {}
 
   enum Status {
@@ -27,22 +31,14 @@ public:
     NOT_CONNECTED,
     /** Communications have been established, but the accelerometer is reading an unusual value for gravity. */
     UNREASONABLE,
-    /** Communications have been established, but the sensors are not collecting data. */
-    ASLEEP,
     /** The sensor is ready to be read. */
     ACTIVE,
   };
 
   /** Check the sensor status. */
   Status getStatus() const noexcept {
-    if (!m_registeredAccelerometer || !m_registeredGyroscope) {
-      if (m_reasonableGravity) {
-        // A reasonable value was read, but then the sensors were turned off.
-        return Status::ASLEEP;
-      } else {
-        // Nothing works
-        return Status::NOT_CONNECTED;
-      }
+    if (!m_begun) {
+      return Status::NOT_CONNECTED;
     } else if (m_reasonableGravity) {
       return Status::ACTIVE;
     } else {
@@ -58,92 +54,62 @@ public:
    * accelerometer values.
    * @return A boolean indicating whether the values were successfully read.
    */
-  bool getValues(sh2_Accelerometer_t* accel, sh2_Gyroscope_t* gyro) {
-    if (accel == nullptr && gyro == nullptr) {
-      // seriously?
-      return true;
-    }
-
-    // Don't bother if the sensor didn't register properly
-    if ((accel != nullptr && !m_registeredAccelerometer) || (gyro != nullptr && !m_registeredGyroscope)) {
-      return false;
-    }
-
-    sh2_SensorValue_t value;
-    if (!m_bno08x.getSensorEvent(&value)) {
-      // Neither one is ready
-      return false;
-    }
-
-    bool accel_found = (accel == nullptr), gyro_found = (gyro == nullptr);
-
-    while (true) {
-      switch (value.sensorId) {
-      case SH2_ACCELEROMETER:
-        accel_found = true;
-        if (accel != nullptr) {
-          *accel = value.un.accelerometer;
-        }
-        break;
-      case SH2_GYROSCOPE_CALIBRATED:
-        gyro_found = true;
-        if (gyro != nullptr) {
-          *gyro = value.un.gyroscope;
-        }
-        break;
-      default:
-        Serial.print("Unexpected sensor ID ");
-        Serial.println(value.sensorId);
-      }
-
-      // If both are found, we're done
-      if (accel_found && gyro_found) {
+  bool getValues(vector3* accel, vector3* gyro) {
+    if (accel == nullptr) {
+      if (gyro == nullptr) {
         return true;
       }
-      // Otherwise, wait for the next sensor reading
-      while (!m_bno08x.getSensorEvent(&value)) {
-        yield();
+
+      sensors_event_t gyroEvent;
+      bool success = m_sensor.getEvent(nullptr, nullptr, &gyroEvent, nullptr);
+      if (success) {
+        // Because you can't copy arrays with the `=` operator, use memcpy instead
+        memcpy(&(gyro->data), &gyroEvent.gyro.v, sizeof gyro->data);
       }
+      return success;
+    } else if (gyro == nullptr) {
+      sensors_event_t accelEvent;
+      bool success = m_sensor.getEvent(&accelEvent, nullptr, nullptr, nullptr);
+      if (success) {
+        memcpy(&(accel->data), &accelEvent.acceleration.v, sizeof accel->data);
+      }
+      return success;
+    } else {
+      sensors_event_t accelEvent, gyroEvent;
+      bool success = m_sensor.getEvent(&accelEvent, nullptr, &gyroEvent, nullptr);
+      if (success) {
+        memcpy(&(gyro->data), &gyroEvent.gyro.v, sizeof gyro->data);
+        memcpy(&(accel->data), &accelEvent.acceleration.v, sizeof accel->data);
+      }
+      return success;
     }
   }
 
   /** Get the magnitude of acceleration. */
-  static float getMagnitude(const sh2_Accelerometer_t& accel) noexcept {
+  static float getMagnitude(const vector3& accel) noexcept {
     return sqrtf(accel.x * accel.x + accel.y * accel.y + accel.z * accel.z);
   }
 
   /** Initialize communications with the IMU. Call this during initial setup or to wake the IMU from sleep. */
   void initialize() {
-    static bool begun = false;
+    if (!m_begun) {
+      m_begun = m_sensor.begin();
 
-    if (!begun) {
-      begun = m_bno08x.begin_I2C(BNO08x_I2CADDR_DEFAULT, m_i2c);
-    }
-
-    if (begun) {
-      if (!m_registeredAccelerometer) {
-        m_registeredAccelerometer = m_bno08x.enableReport(SH2_ACCELEROMETER);
-      }
-      if (!m_registeredGyroscope) {
-        m_registeredGyroscope = m_bno08x.enableReport(SH2_GYROSCOPE_CALIBRATED);
-      }
-
-      if (!m_reasonableGravity) {
-        sh2_Accelerometer_t accel;
-        while (!getValues(&accel, nullptr)) {
-          delay(10);
-        }
-
-        float magnitude = getMagnitude(accel);
-        m_reasonableGravity = (9.6F <= magnitude && magnitude <= 10.0F);
+      if (m_begun) {
+        m_sensor.setupAccel(Adafruit_LSM9DS1::LSM9DS1_ACCELRANGE_16G);
+        // TODO: will we need faster?
+        m_sensor.setupGyro(Adafruit_LSM9DS1::LSM9DS1_GYROSCALE_245DPS);
       }
     }
-  }
 
-  /** Stop collecting measurements. */
-  void sleep() {
-    m_bno08x.hardwareReset();
-    m_registeredAccelerometer = false;
-    m_registeredGyroscope = false;
+    if (m_begun && !m_reasonableGravity) {
+      vector3 accel;
+      while (!getValues(&accel, nullptr)) {
+        yield();
+      }
+
+      float magnitude = getMagnitude(accel);
+      m_reasonableGravity = (9.3F <= magnitude && magnitude <= 10.4F);
+    }
   }
 };
