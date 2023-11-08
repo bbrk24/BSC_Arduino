@@ -21,7 +21,7 @@ public:
   GPS(TwoWire* theI2C) :
     m_gnss(),
     m_i2c(theI2C),
-    m_begun(false) {
+    m_phase(0) {
       // *2 to make the hardware timeout longer than the software timeout
       m_i2c->setTimeout(kUBLOXGNSSDefaultMaxWait * 2);
   }
@@ -39,7 +39,7 @@ public:
   Status getStatus() const noexcept {
     if (m_phase == 0) {
       return Status::NOT_CONNECTED;
-    } else if (m_phase <= 5) {
+    } else if (m_phase <= 6) {
       return Status::NOT_CONFIGURED;
     } else {
       return Status::ACTIVE;
@@ -65,14 +65,17 @@ public:
       // Possibly not necessary, but recommended by the documentation to do just in case
       ENABLE_PHASE(SFE_UBLOX_GNSS_ID_GPS, true);
     case 2:
+      // Disabled in a specific order so that all intermediate configurations are valid for both
+      // SAM-M10Q and ZOE-M8Q (we've been going back and forth on the two)
       ENABLE_PHASE(SFE_UBLOX_GNSS_ID_SBAS, false);
-    // Galileo and IMES are disabled by default, so no need to explicitly disable them
     case 3:
       ENABLE_PHASE(SFE_UBLOX_GNSS_ID_BEIDOU, false);
     case 4:
       ENABLE_PHASE(SFE_UBLOX_GNSS_ID_QZSS, false);
     case 5:
       ENABLE_PHASE(SFE_UBLOX_GNSS_ID_GLONASS, false);
+    case 6:
+      ENABLE_PHASE(SFE_UBLOX_GNSS_ID_GALILEO, false);
     default:
       break;
     }

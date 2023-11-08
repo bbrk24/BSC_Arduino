@@ -1,5 +1,6 @@
 #if true
 
+#include "wiring_private.h"
 #include "altimeter.h"
 #include "imu.h"
 #include "humidity.h"
@@ -7,33 +8,79 @@
 
 Altimeter alt;
 
+/*
+On the Arduino MKR series, all pins for a I2C/UART/SPI instance must be on the same "sercom" object.
+Additionally, for I2C, only some pins are suitable for clock and only some pins are suitable for
+data. There are six sercoms:
+
+sercom0: 2, 3, 11 (SDA), 12 (SCL), A3 (SDA), A4 (SCL), A5, A6
+sercom1: 8 (SDA), 9 (SCL), 10
+sercom2: 2, 3, 11 (SDA), 12 (SCL), <SD>
+sercom3: 0 (SDA), 1 (SCL), 6, 7, 8 (SDA), 9 (SCL), 10, <USB>
+sercom4: 4, 5, <SD>
+sercom5: 0 (SDA), 1 (SCL), 13, 14, A1 (SDA), A2 (SCL)
+
+Pins not marked as "SDA" or "SCL" can only be used for SPI or UART.
+
+Information derived from
+https://raw.githubusercontent.com/arduino/ArduinoCore-samd/master/variants/mkrzero/variant.cpp
+and
+https://ww1.microchip.com/downloads/en/DeviceDoc/SAM_D21_DA1_Family_DataSheet_DS40001882F.pdf
+
+There is also some additional code that must be added, as per
+https://docs.arduino.cc/tutorials/communication/SamdSercom#create-a-new-wire-instance
+
+On the Arduino Nano series, pins 0 and 1 must be disconnected while uploading code or using the
+built-in `Serial`. The Nano series does not have sercoms, so I test for their presence with
+`#ifdef _SERCOM_CLASS_`.
+*/
+
 static TwoWire imuI2C(
-// difference between Nano and MKRZero
 #ifdef _SERCOM_CLASS_
-  &sercom5,
+  &sercom1,
 #endif
-  /*sda:*/7,
-  /*scl:*/6
+  /*sda:*/8,
+  /*scl:*/9
 );
 IMU imu(&imuI2C);
 
 static TwoWire humidityI2C(
 #ifdef _SERCOM_CLASS_
-  &sercom4,
-#endif
+  &sercom0,
+  /*sda:*/A3,
+  /*scl:*/A4
+#else
+  // A4 is taken by the altimeter on the nano, so route this elsewhere
   /*sda:*/4,
   /*scl:*/5
+#endif
 );
 HumiditySensor hum(&humidityI2C);
 
 static TwoWire gpsI2C(
 #ifdef _SERCOM_CLASS_
-  &sercom2,
+  &sercom3,
 #endif
-  /*sda:*/3,
-  /*scl:*/2
+  /*sda:*/0,
+  /*scl:*/1
 );
 GPS gps(&gpsI2C);
+
+#ifdef _SERCOM_CLASS_
+extern "C" {
+void SERCOM1_Handler(void) {
+  imuI2C.onService();
+}
+
+void SERCOM0_Handler(void) {
+  humidityI2C.onService();
+}
+
+void SERCOM3_Handler(void) {
+  gpsI2C.onService();
+}
+} // extern "C"
+#endif
 
 void updateStatusLEDs() {
   IMU::Status imuStatus = imu.getStatus();
@@ -43,7 +90,7 @@ void updateStatusLEDs() {
     altimeterStatus == Altimeter::ACTIVE
     && imuStatus == IMU::ACTIVE
     && humidityStatus == HumiditySensor::ACTIVE;
-  digitalWrite(9, good);
+  digitalWrite(7, good);
   digitalWrite(10, !good);
 }
 
@@ -51,11 +98,20 @@ void setup() {
   Serial.begin(9600);
 
   // Pin A1: analog input from VOC sensor
-  pinMode(A1, PinMode::INPUT);
-  // Pin D9: OK LED
-  pinMode(9, PinMode::OUTPUT);
+  pinMode(A6, PinMode::INPUT);
+  // Pin D7: OK LED
+  pinMode(7, PinMode::OUTPUT);
   // Pin D10: Error LED
   pinMode(10, PinMode::OUTPUT);
+
+#ifdef _SERCOM_CLASS_
+  pinPeripheral(0, PIO_SERCOM);
+  pinPeripheral(1, PIO_SERCOM);
+  pinPeripheral(8, PIO_SERCOM);
+  pinPeripheral(9, PIO_SERCOM);
+  pinPeripheral(A3, PIO_SERCOM);
+  pinPeripheral(A4, PIO_SERCOM);
+#endif
 
   // Turn on the error LED until initialization finishes
   digitalWrite(10, HIGH);
@@ -97,7 +153,7 @@ void printGPSData(const GPS::Coordinates& loc) {
     Serial.print(loc.longitude);
     Serial.print('E');
   }
-  Serial.print(", ")
+  Serial.print(", ");
   Serial.print(loc.altitudeMSL);
   Serial.println("ft");
 
@@ -119,13 +175,13 @@ void printGPSData(const GPS::Coordinates& loc) {
   if (loc.timestamp.milliseconds < 10) {
     Serial.print('0');
   }
-  Serial.println(loc.timestamp.milliseconds)
+  Serial.println(loc.timestamp.milliseconds);
 }
 
 void loop() {
   delay(500);
 
-  int v = analogRead(1);
+  int v = analogRead(6);
   Serial.print("VOC voltage: ");
   Serial.println(3.3F / 1023.0F * (float)v);
 
