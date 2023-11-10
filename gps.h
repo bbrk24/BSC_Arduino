@@ -83,30 +83,29 @@ public:
 #undef ENABLE_PHASE
   }
 
-  struct Coordinates {
+  using Timestamp = struct {
+    unsigned int milliseconds : 10;
+    unsigned int seconds : 6;
+    unsigned int minutes : 6;
+    unsigned int hours : 5;
+    // Storage layout:
+    // 31              23              15               7             0
+    // +- - - - - - - -+- - - - - - - -+- - - - - - - -+- - - - - - - -+
+    // | (zero)  |  hours  |  minutes  |  seconds  |   milliseconds    |
+    // +- - - - - - - -+- - - - - - - -+- - - - - - - -+- - - - - - - -+
+  };
+
+  using Coordinates = struct {
     /** Longitude, in degrees */
-    float longitude;
+    double longitude;
     /** Latitude, in degrees */
-    float latitude;
+    double latitude;
     /** Altitude, in feet above mean sea level (not AGL!) */
     float altitudeMSL;
     /** Number of visible satellites */
     uint8_t numSatellites;
 
-    union {
-      struct {
-        unsigned int milliseconds : 10;
-        unsigned int seconds : 6;
-        unsigned int minutes : 6;
-        unsigned int hours : 5;
-        // Storage layout:
-        //  31              23              15              7             0
-        // +- - - - - - - -+- - - - - - - -+- - - - - - - -+- - - - - - - -+
-        // | (zero)  |  hours  |  minutes  |  seconds  |   milliseconds    |
-        // +- - - - - - - -+- - - - - - - -+- - - - - - - -+- - - - - - - -+
-      };
-      uint32_t rawValue;
-    } timestamp;
+    Timestamp timestamp;
   };
 
   /**
@@ -117,8 +116,8 @@ public:
   bool getLocation(Coordinates* loc) {
     bool success = m_gnss.getPVT();
     if (success) {
-      loc->longitude = 1.0e+7F * (float)m_gnss.getLongitude();
-      loc->latitude = 1.0e+7F * (float)m_gnss.getLatitude();
+      loc->longitude = 1.0e-7 * (double)m_gnss.getLongitude();
+      loc->latitude = 1.0e-7 * (double)m_gnss.getLatitude();
 
       const float FEET_PER_MILLIMETER = 0.0032808399F;
       loc->altitudeMSL = FEET_PER_MILLIMETER * (float)m_gnss.getAltitudeMSL();
@@ -131,5 +130,9 @@ public:
       loc->timestamp.hours = m_gnss.getHour();
     }
     return success;
+  }
+
+  static uint32_t getTotalMS(Timestamp t) noexcept {
+    return ((t.hours * 60 + t.minutes) * 60 + t.seconds) * 1000 + t.milliseconds;
   }
 };

@@ -26,7 +26,7 @@ public:
 
   /** Check the sensor status. */
   Status getStatus() const noexcept {
-    if (m_begun) {
+    if (!m_begun) {
       return Status::NOT_CONNECTED;
     } else {
       return Status::ACTIVE;

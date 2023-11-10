@@ -1,10 +1,15 @@
 #if true
 
 #include "wiring_private.h"
+
+// 1 for camera, 2 for atmospheric sensors
+#define CAPSULE 2
+
 #include "altimeter.h"
 #include "imu.h"
 #include "humidity.h"
 #include "gps.h"
+#include "frame.h"
 
 Altimeter alt;
 
@@ -97,7 +102,7 @@ void updateStatusLEDs() {
 void setup() {
   Serial.begin(9600);
 
-  // Pin A1: analog input from VOC sensor
+  // Pin A6: analog input from VOC sensor
   pinMode(A6, PinMode::INPUT);
   // Pin D7: OK LED
   pinMode(7, PinMode::OUTPUT);

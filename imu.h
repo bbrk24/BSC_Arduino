@@ -97,8 +97,7 @@ public:
 
       if (m_begun) {
         m_sensor.setupAccel(Adafruit_LSM9DS1::LSM9DS1_ACCELRANGE_16G);
-        // TODO: will we need faster?
-        m_sensor.setupGyro(Adafruit_LSM9DS1::LSM9DS1_GYROSCALE_245DPS);
+        m_sensor.setupGyro(Adafruit_LSM9DS1::LSM9DS1_GYROSCALE_2000DPS);
       }
     }
 
@@ -109,7 +108,7 @@ public:
       }
 
       float magnitude = getMagnitude(accel);
-      m_reasonableGravity = (9.3F <= magnitude && magnitude <= 10.4F);
+      m_reasonableGravity = (8.93F <= magnitude && magnitude <= 10.69F);
     }
   }
 };
