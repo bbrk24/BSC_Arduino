@@ -21,9 +21,13 @@ private:
     if (!safeToHeat()) {
       return SHT4X_NO_HEATER;
     }
-    // If it's too humid, run the heater
+    // The sensor gives most accurate values above 5C
+    if (m_lastTemp < 5.0F) {
+      return SHT4X_HIGH_HEATER_100MS;
+    }
+    // If it's too humid, the heater helps prevent drift
     if (m_lastHumid > 80.0F) {
-      return SHT4X_MED_HEATER_100MS;
+      return SHT4X_LOW_HEATER_100MS;
     }
     // By default, don't run the heater, as it makes measurements slower
     return SHT4X_NO_HEATER;
@@ -69,7 +73,7 @@ public:
         // get initial values for m_lastHumid and m_lastTemp with no heating
         m_sensor.setHeater(SHT4X_NO_HEATER);
         sensors_event_t humidEvent, tempEvent;
-        m_sensor.getEvent(&humidEvent, &tempEvent)
+        m_sensor.getEvent(&humidEvent, &tempEvent);
         m_lastHumid = humidEvent.relative_humidity;
         m_lastTemp = tempEvent.temperature;
       }
@@ -86,7 +90,7 @@ public:
     float* humidity,
     float* temperature
   ) {
-    if (humidity == nullptr && temperature = nullptr) {
+    if (humidity == nullptr && temperature == nullptr) {
       // there's nothing to try
       return true;
     }
@@ -99,16 +103,16 @@ public:
     if (temperature == nullptr) {
       sensors_event_t humidEvent;
       success = m_sensor.getEvent(&humidEvent, nullptr);
-      *humidity = humidEvent.relative_humidity;
+      *humidity = m_lastHumid = humidEvent.relative_humidity;
     } else if (humidity == nullptr) {
       sensors_event_t tempEvent;
       success = m_sensor.getEvent(nullptr, &tempEvent);
-      *temperature = tempEvent.temperature;
+      *temperature = m_lastTemp = tempEvent.temperature;
     } else {
       sensors_event_t humidEvent, tempEvent;
       success = m_sensor.getEvent(&humidEvent, &tempEvent);
-      *humidity = humidEvent.relative_humidity;
-      *temperature = tempEvent.temperature;
+      *humidity = m_lastHumid = humidEvent.relative_humidity;
+      *temperature = m_lastTemp = tempEvent.temperature;
     }
 
     if (heater != SHT4X_NO_HEATER) {
