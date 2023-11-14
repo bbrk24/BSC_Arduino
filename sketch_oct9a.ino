@@ -1,18 +1,29 @@
 #if true
 
 #include "wiring_private.h"
+#include "Scheduler.h"
 
 // 1 for camera, 2 for atmospheric sensors
 #define CAPSULE 2
 
 #include "altimeter.h"
 #include "imu.h"
-#include "humidity.h"
 #include "gps.h"
+
+#if CAPSULE == 2
+#include "humidity.h"
+#endif
+
 #include "frame.h"
 #include "SD_Card.h"
 
+// How many times per second the data will be sent over radio.
+// If this is more than ~18, some packets will have outdated GPS info.
+// If this is more than ~200, the radio will be rate-limited by the sensors.
+const unsigned long RADIO_FREQ = 1;
+
 Altimeter alt;
+volatile float last_alt;
 
 /*
 On the Arduino MKR series, all pins for a I2C/UART/SPI instance must be on the same "sercom" object.
@@ -35,48 +46,40 @@ https://ww1.microchip.com/downloads/en/DeviceDoc/SAM_D21_DA1_Family_DataSheet_DS
 
 There is also some additional code that must be added, as per
 https://docs.arduino.cc/tutorials/communication/SamdSercom#create-a-new-wire-instance
-
-On the Arduino Nano series, pins 0 and 1 must be disconnected while uploading code or using the
-built-in `Serial`. The Nano series does not have sercoms, so I test for their presence with
-`#ifdef _SERCOM_CLASS_`.
 */
 
 static TwoWire imuI2C(
-#ifdef _SERCOM_CLASS_
   &sercom1,
-#endif
   /*sda:*/8,
   /*scl:*/9
 );
 IMU imu(&imuI2C);
+volatile IMU::vector3 last_accel;
+volatile IMU::vector3 last_gyro;
 
 #if CAPSULE == 2
 static TwoWire humidityI2C(
-#ifdef _SERCOM_CLASS_
   &sercom0,
   /*sda:*/A3,
   /*scl:*/A4
-#else
-  // A4 is taken by the altimeter on the nano, so route this elsewhere
-  /*sda:*/4,
-  /*scl:*/5
-#endif
 );
 HumiditySensor hum(&humidityI2C);
+volatile float last_humid;
+volatile float last_temp;
+
+volatile int last_voc;
 #endif
 
 static TwoWire gpsI2C(
-#ifdef _SERCOM_CLASS_
   &sercom3,
-#endif
   /*sda:*/0,
   /*scl:*/1
 );
 GPS gps(&gpsI2C);
+volatile GPS::Coordinates last_coords;
 
 SDCard card;
 
-#ifdef _SERCOM_CLASS_
 extern "C" {
 void SERCOM1_Handler(void) {
   imuI2C.onService();
@@ -90,7 +93,6 @@ void SERCOM3_Handler(void) {
   gpsI2C.onService();
 }
 } // extern "C"
-#endif
 
 void updateSensorLEDs() {
   IMU::Status imuStatus = imu.getStatus();
@@ -119,7 +121,6 @@ void updateSDCardLEDs() {
 }
 
 void setup() {
-#ifdef _SERCOM_CLASS_
   // Since the RTS and CTS pins are private, I have to initialize a whole new object, rather than
   // just assigning those two pins
   Serial1 = Uart(
@@ -128,12 +129,12 @@ void setup() {
     // and then:
     /*rts:*/A1, /*cts:*/A2
   );
-#endif
+  Serial1.begin(9600);
 
-  Serial.begin(9600);
-
+#if CAPSULE == 2
   // Pin A6: analog input from VOC sensor
   pinMode(A6, PinMode::INPUT);
+#endif
   // Pin D5: SD LEDs
   pinMode(5, PinMode::OUTPUT);
   // Pin D6: GPS LEDs
@@ -141,21 +142,19 @@ void setup() {
   // Pin D7: sensor LEDs
   pinMode(7, PinMode::OUTPUT);
 
-#ifdef _SERCOM_CLASS_
   pinPeripheral(0, PIO_SERCOM);
   pinPeripheral(1, PIO_SERCOM);
   pinPeripheral(8, PIO_SERCOM);
   pinPeripheral(9, PIO_SERCOM);
+  pinPeripheral(A1, PIO_SERCOM);
+  pinPeripheral(A2, PIO_SERCOM);
   pinPeripheral(A3, PIO_SERCOM);
   pinPeripheral(A4, PIO_SERCOM);
-#endif
 
   // Turn on the error LEDs until initialization finishes
   digitalWrite(5, LOW);
   digitalWrite(6, LOW);
   digitalWrite(7, LOW);
-
-  while (!Serial) { /* wait for serial port to connect */ }
 
   // Initialize sensors
   alt.initialize();
@@ -164,126 +163,93 @@ void setup() {
   hum.initialize();
 #endif
   updateSensorLEDs();
-}
 
-void printAcceleration(const IMU::vector3& accel) {
-  Serial.print('(');
-  Serial.print(accel.x);
-  Serial.print(", ");
-  Serial.print(accel.y);
-  Serial.print(", ");
-  Serial.print(accel.z);
-  Serial.print(") - magnitude ");
+  gps.initialize();
+  updateGPSLEDs();
 
-  float magnitude = IMU::getMagnitude(accel);
-  Serial.print(magnitude);
-}
-
-void printGPSData(const GPS::Coordinates& loc) {
-  if (loc.latitude < 0) {
-    Serial.print(-loc.latitude);
-    Serial.print("S ");
-  } else {
-    Serial.print(loc.latitude);
-    Serial.print("N ");
-  }
-  if (loc.longitude < 0) {
-    Serial.print(-loc.longitude);
-    Serial.print('W');
-  } else {
-    Serial.print(loc.longitude);
-    Serial.print('E');
-  }
-  Serial.print(", ");
-  Serial.print(loc.altitudeMSL);
-  Serial.println("ft");
-
-  Serial.print(loc.timestamp.hours);
-  Serial.print(':');
-  if (loc.timestamp.minutes < 10) {
-    Serial.print('0');
-  }
-  Serial.print(loc.timestamp.minutes);
-  Serial.print(':');
-  if (loc.timestamp.seconds < 10) {
-    Serial.print('0');
-  }
-  Serial.print(loc.timestamp.seconds);
-  Serial.print('.');
-  if (loc.timestamp.milliseconds < 100) {
-    Serial.print('0');
-  }
-  if (loc.timestamp.milliseconds < 10) {
-    Serial.print('0');
-  }
-  Serial.println(loc.timestamp.milliseconds);
+  Scheduler.startLoop(gps_loop);
+  Scheduler.startLoop(radio_loop);
 }
 
 void loop() {
-  delay(500);
-
 #if CAPSULE == 2
-  int v = analogRead(6);
-  Serial.print("VOC voltage: ");
-  Serial.println(3.3F / 1023.0F * (float)v);
-#endif
+  last_voc = analogRead(6);
 
-  if (alt.getStatus() == Altimeter::ACTIVE) {
-    float altitude = alt.getAltitude();
-    Serial.print("Altitude (feet): ");
-    Serial.println(altitude);
-  } else {
-    alt.initialize();
+  if (hum.getStatus() != HumiditySensor::ACTIVE) {
+    hum.initialize();
     updateSensorLEDs();
   }
 
-  if (imu.getStatus() == IMU::ACTIVE) {
-    IMU::vector3 accel;
-    IMU::vector3 gyro;
-    if (imu.getValues(&accel, &gyro)) {
-      Serial.print("Acceleration (m/s^2): ");
-      printAcceleration(accel);
-      Serial.print("\nGyroscope (rad/s): (");
-      Serial.print(gyro.x);
-      Serial.print(", ");
-      Serial.print(gyro.y);
-      Serial.print(", ");
-      Serial.print(gyro.z);
-      Serial.println(')');
-    } else {
-      Serial.println("No IMU value read");
-    }
-  } else {
+  float humid, temp;
+  if (hum.getValues(&humid, &temp)) {
+    last_humid = humid;
+    last_temp = temp;
+  }
+
+  // Requesting data from the humidity sensor can be relatively slow
+  yield();
+#endif
+
+  if (imu.getStatus() != IMU::ACTIVE) {
     imu.initialize();
     updateSensorLEDs();
   }
 
-#if CAPSULE == 2
-  if (hum.getStatus() == HumiditySensor::ACTIVE) {
-    float humidity;
-    float temp;
-    if (hum.getValues(&humidity, &temp)) {
-      Serial.print("Humidity (%RH):");
-      Serial.println(humidity);
-      Serial.print("Temperature (C):");
-      Serial.println(temp);
-    } else {
-      Serial.println("No humidity value read");
-    }
-  } else {
-    hum.initialize();
+  IMU::vector3 accel, gyro;
+  if (imu.getValues(&accel, &gyro)) {
+    last_accel = accel;
+    last_gyro = gyro;
+  }
+
+  if (alt.getStatus() != Altimeter::ACTIVE) {
+    alt.initialize();
     updateSensorLEDs();
   }
-#endif
 
-  if (gps.getStatus() == GPS::ACTIVE) {
-    GPS::Coordinates loc;
-    if (gps.getLocation(&loc)) {
-      printGPSData(loc);
-    } else {
-      Serial.println("No GPS value read");
-    }
+  if (alt.getStatus() == Altimeter::ACTIVE) {
+    last_alt = alt.getAltitude();
   }
+
+  yield();
+
+  // TODO: Write data to SD card
+}
+
+void gps_loop() {
+  if (gps.getStatus() != GPS::ACTIVE) {
+    gps.initialize();
+    updateGPSLEDs();
+  }
+
+  GPS::Coordinates c;
+  if (gps.getLocation(&c)) {
+    last_coords = c;
+  }
+
+  const unsigned long GPS_FREQ = 18;
+  delay(1000 / GPS_FREQ);
+}
+
+void radio_loop() {
+  delay(1000 / RADIO_FREQ);
+
+  Frame f = createFrame(
+    last_coords,
+    last_accel,
+    last_gyro,
+    last_alt
+#if CAPSULE == 2
+    ,
+    last_voc,
+    last_humid,
+    last_temp
+#endif
+  );
+
+  Serial1.write(
+    (char*)&f,
+    FRAME_SIZE()
+  );
 }
 
 #endif
