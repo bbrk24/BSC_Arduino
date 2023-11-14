@@ -64,10 +64,9 @@ struct Frame {
 #pragma GCC diagnostic pop
 
 constexpr size_t FRAME_SIZE() {
-  Frame f{0};
-  return sizeof f 
+  return sizeof (Frame)
 #if CAPSULE == 2
-    - sizeof f.padding
+    - sizeof Frame{0}.padding
 #endif
   ;
 }

@@ -49,6 +49,7 @@ static TwoWire imuI2C(
 );
 IMU imu(&imuI2C);
 
+#if CAPSULE == 2
 static TwoWire humidityI2C(
 #ifdef _SERCOM_CLASS_
   &sercom0,
@@ -61,6 +62,7 @@ static TwoWire humidityI2C(
 #endif
 );
 HumiditySensor hum(&humidityI2C);
+#endif
 
 static TwoWire gpsI2C(
 #ifdef _SERCOM_CLASS_
@@ -90,16 +92,32 @@ void SERCOM3_Handler(void) {
 void updateStatusLEDs() {
   IMU::Status imuStatus = imu.getStatus();
   Altimeter::Status altimeterStatus = alt.getStatus();
+#if CAPSULE == 2
   HumiditySensor::Status humidityStatus = hum.getStatus();
+#endif
   bool good =
     altimeterStatus == Altimeter::ACTIVE
     && imuStatus == IMU::ACTIVE
-    && humidityStatus == HumiditySensor::ACTIVE;
+#if CAPSULE == 2
+    && humidityStatus == HumiditySensor::ACTIVE
+#endif
+  ;
   digitalWrite(7, good);
   digitalWrite(10, !good);
 }
 
 void setup() {
+#ifdef _SERCOM_CLASS_
+  // Since the RTS and CTS pins are private, I have to initialize a whole new object, rather than
+  // just assigning those two pins
+  Serial1 = Uart(
+    // First five arguments are the same as default
+    &sercom5, PIN_SERIAL1_RX, PIN_SERIAL1_TX, PAD_SERIAL1_RX, PAD_SERIAL1_TX,
+    // and then:
+    /*rts:*/A1, /*cts:*/A2
+  );
+#endif
+
   Serial.begin(9600);
 
   // Pin A6: analog input from VOC sensor
@@ -126,7 +144,9 @@ void setup() {
   // Initialize sensors
   alt.initialize();
   imu.initialize();
+#if CAPSULE == 2
   hum.initialize();
+#endif
   updateStatusLEDs();
 }
 
@@ -186,9 +206,11 @@ void printGPSData(const GPS::Coordinates& loc) {
 void loop() {
   delay(500);
 
+#if CAPSULE == 2
   int v = analogRead(6);
   Serial.print("VOC voltage: ");
   Serial.println(3.3F / 1023.0F * (float)v);
+#endif
 
   if (alt.getStatus() == Altimeter::ACTIVE) {
     float altitude = alt.getAltitude();
@@ -220,6 +242,7 @@ void loop() {
     updateStatusLEDs();
   }
 
+#if CAPSULE == 2
   if (hum.getStatus() == HumiditySensor::ACTIVE) {
     float humidity;
     float temp;
@@ -235,6 +258,7 @@ void loop() {
     hum.initialize();
     updateStatusLEDs();
   }
+#endif
 
   if (gps.getStatus() == GPS::ACTIVE) {
     GPS::Coordinates loc;
