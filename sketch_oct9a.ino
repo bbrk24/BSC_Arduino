@@ -10,6 +10,7 @@
 #include "humidity.h"
 #include "gps.h"
 #include "frame.h"
+#include "SD_Card.h"
 
 Altimeter alt;
 
