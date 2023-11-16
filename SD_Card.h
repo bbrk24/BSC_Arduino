@@ -8,11 +8,11 @@
 
 class SDCard {
   private:
-    File m_sdCardDataFile;
-    static const int m_chipSelect = 4; // this is not the final value - SDCARD_SS_PIN is the correct one for the MKR Zero
-    static const String m_fileName = "rocketry_data";
+    File M_SDCARD_DATA_FILE;
+    static const int M_CHIP_SELECT = 4; // this is not the final value - SDCARD_SS_PIN is the correct one for the MKR Zero
+    static const String M_FILE_NAME = "rocketry_data";
   public:
-    void writeToCSV( // this is equivalent 
+    void writeToCSV( // this is equivalent to loop()
       const GPS::Coordinates& coords,
       const IMU::vector3& accel,
       const IMU::vector3& gyro,
@@ -21,7 +21,7 @@ class SDCard {
       float humidity,
       float temperature) {
         // checks if SD card is open and good to be written to 
-        if (m_sdCardDataFile) {
+        if (M_SDCARD_DATA_FILE) {
           String dataOutputString = "";
 
           dataOutputString += String(coords.latitude);
@@ -41,13 +41,6 @@ class SDCard {
           dataOutputString += ",";
           dataOutputString += String(accel.z);
           dataOutputString += ",";
-          
-          dataOutputString += String(gyro.x);
-          dataOutputString += ",";
-          dataOutputString += String(gyro.y);
-          dataOutputString += ",";
-          dataOutputString += String(gyro.z);
-          dataOutputString += ",";
 
           dataOutputString += String(altitude);
 
@@ -63,16 +56,19 @@ class SDCard {
 
           dataOutputString += String(temperature);
 
-          m_sdCardDataFile.println(dataOutputString);
+          dataOutputString += ",";
+
+          dataOutputString += String(gyro.x);
+          dataOutputString += ",";
+          dataOutputString += String(gyro.y);
+          dataOutputString += ",";
+          dataOutputString += String(gyro.z);
+
+          M_SDCARD_DATA_FILE.println(dataOutputString);
         }
       }
 
-    void sd_initialize() { // this is equivalent to setup()
-      if (!SD.begin(m_chipSelect)) {
-        Serial.println("SD card not present!!");
-
-        while (1);
-      }
+    void initialize() { // this is equivalent to setup()
 
       Serial.println("SD Card detected and initialized");
 
@@ -80,6 +76,6 @@ class SDCard {
     }
 
     void sd_closeFile() {
-      m_sdCardDataFile.close();
+      M_SDCARD_DATA_FILE.close();
     }
 };
