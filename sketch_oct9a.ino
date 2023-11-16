@@ -89,7 +89,7 @@ void SERCOM3_Handler(void) {
 } // extern "C"
 #endif
 
-void updateStatusLEDs() {
+void updateSensorLEDs() {
   IMU::Status imuStatus = imu.getStatus();
   Altimeter::Status altimeterStatus = alt.getStatus();
 #if CAPSULE == 2
@@ -103,8 +103,15 @@ void updateStatusLEDs() {
 #endif
   ;
   digitalWrite(7, good);
-  digitalWrite(10, !good);
 }
+
+void updateGPSLEDs() {
+  bool good = gps.getStatus() == GPS::ACTIVE;
+  digitalWrite(6, good);
+}
+
+// TODO: updateSDCardLEDs
+// Without having an SD card implementation, I don't even know what to check.
 
 void setup() {
 #ifdef _SERCOM_CLASS_
@@ -122,10 +129,12 @@ void setup() {
 
   // Pin A6: analog input from VOC sensor
   pinMode(A6, PinMode::INPUT);
-  // Pin D7: OK LED
+  // Pin D5: SD LEDs
+  pinMode(5, PinMode::OUTPUT);
+  // Pin D6: GPS LEDs
+  pinMode(6, PinMode::OUTPUT);
+  // Pin D7: sensor LEDs
   pinMode(7, PinMode::OUTPUT);
-  // Pin D10: Error LED
-  pinMode(10, PinMode::OUTPUT);
 
 #ifdef _SERCOM_CLASS_
   pinPeripheral(0, PIO_SERCOM);
@@ -136,8 +145,10 @@ void setup() {
   pinPeripheral(A4, PIO_SERCOM);
 #endif
 
-  // Turn on the error LED until initialization finishes
-  digitalWrite(10, HIGH);
+  // Turn on the error LEDs until initialization finishes
+  digitalWrite(5, LOW);
+  digitalWrite(6, LOW);
+  digitalWrite(7, LOW);
 
   while (!Serial) { /* wait for serial port to connect */ }
 
@@ -147,7 +158,7 @@ void setup() {
 #if CAPSULE == 2
   hum.initialize();
 #endif
-  updateStatusLEDs();
+  updateSensorLEDs();
 }
 
 void printAcceleration(const IMU::vector3& accel) {
@@ -218,7 +229,7 @@ void loop() {
     Serial.println(altitude);
   } else {
     alt.initialize();
-    updateStatusLEDs();
+    updateSensorLEDs();
   }
 
   if (imu.getStatus() == IMU::ACTIVE) {
@@ -239,7 +250,7 @@ void loop() {
     }
   } else {
     imu.initialize();
-    updateStatusLEDs();
+    updateSensorLEDs();
   }
 
 #if CAPSULE == 2
@@ -256,7 +267,7 @@ void loop() {
     }
   } else {
     hum.initialize();
-    updateStatusLEDs();
+    updateSensorLEDs();
   }
 #endif
 
