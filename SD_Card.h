@@ -4,11 +4,13 @@
 #include "gps.h"
 #include "imu.h"
 
+#define CAPSULE 2
+
 #pragma once
 
 class SDCard {
   private:
-    File M_SDCARD_DATA_FILE;
+    File m_sdCardFile;
     static const int M_CHIP_SELECT = 4; // this is not the final value - SDCARD_SS_PIN is the correct one for the MKR Zero
     static const String M_FILE_NAME = "rocketry_data";
   public:
@@ -21,7 +23,7 @@ class SDCard {
       float humidity,
       float temperature) {
         // checks if SD card is open and good to be written to 
-        if (M_SDCARD_DATA_FILE) {
+        if (m_sdCardFile) {
           String dataOutputString = "";
 
           dataOutputString += String(coords.latitude);
@@ -31,7 +33,7 @@ class SDCard {
           dataOutputString += String(coords.altitudeMSL);
           dataOutputString += ",";
           dataOutputString += String(coords.numSatellites);
-          dataOutputString += ",";
+          dataOutp to utString += ",";
           dataOutputString += String(coords.timestamp.hours) + " : " + String(coords.timestamp.minutes) + " : " + String(coords.timestamp.seconds) + " : " + String(coords.timestamp.milliseconds);
           dataOutputString += ",";
 
@@ -46,6 +48,7 @@ class SDCard {
 
           dataOutputString += ",";
 
+#if CAPSULE == 2
           dataOutputString += String(analogReading);
 
           dataOutputString += ",";
@@ -57,14 +60,14 @@ class SDCard {
           dataOutputString += String(temperature);
 
           dataOutputString += ",";
-
+#endif
           dataOutputString += String(gyro.x);
           dataOutputString += ",";
           dataOutputString += String(gyro.y);
           dataOutputString += ",";
           dataOutputString += String(gyro.z);
 
-          M_SDCARD_DATA_FILE.println(dataOutputString);
+          m_sdCardFile.println(dataOutputString);
         }
       }
 
@@ -72,10 +75,10 @@ class SDCard {
 
       Serial.println("SD Card detected and initialized");
 
-      m_sdCardDataFile = SD.open(m_fileName + ".csv", FILE_WRITE);
+      m_sdCardFile = SD.open(m_fileName + ".csv", FILE_WRITE);
     }
 
-    void sd_closeFile() {
-      M_SDCARD_DATA_FILE.close();
+    void closeFile() {
+      m_sdCardFile.close();
     }
 };
