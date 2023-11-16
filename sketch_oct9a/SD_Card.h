@@ -10,7 +10,7 @@
 
 class SDCard {
   private:
-    File m_sdCardDataFile;
+    File M_SDCARD_DATA_FILE;
     static const int M_CHIP_SELECT = 4; // this is not the final value - SDCARD_SS_PIN is the correct one for the MKR Zero
     static const String M_FILE_NAME = "rocketry_data";
   public:
@@ -23,7 +23,7 @@ class SDCard {
       float humidity,
       float temperature) {
         // checks if SD card is open and good to be written to 
-        if (m_sdCardDataFile) {
+        if (M_SDCARD_DATA_FILE) {
           String dataOutputString = "";
 
           dataOutputString += String(coords.latitude);
@@ -70,7 +70,7 @@ class SDCard {
           dataOutputString += ",";
           dataOutputString += String(gyro.z);
 
-          m_sdCardDataFile.println(dataOutputString);
+          M_SDCARD_DATA_FILE.println(dataOutputString);
         }
       }
 
@@ -82,6 +82,6 @@ class SDCard {
     }
 
     void closeFile() {
-      m_sdCardDataFile.close();
+      M_SDCARD_DATA_FILE.close();
     }
 };
