@@ -17,11 +17,13 @@ class SDCard {
     void writeToCSV( // this is equivalent to loop()
       const GPS::Coordinates& coords,
       const IMU::vector3& accel,
-      const IMU::vector3& gyro,
       float altitude,
+#if CAPSULE == 2
       int analogReading, // this is VOC
       float humidity,
-      float temperature) {
+      float temperature,
+#endif
+      const IMU::vector3& gyro) {
         // checks if SD card is open and good to be written to 
         if (m_sdCardFile) {
           String dataOutputString = "";
@@ -33,7 +35,7 @@ class SDCard {
           dataOutputString += String(coords.altitudeMSL);
           dataOutputString += ",";
           dataOutputString += String(coords.numSatellites);
-          dataOutp to utString += ",";
+          dataOutputString += ",";
           dataOutputString += String(coords.timestamp.hours) + " : " + String(coords.timestamp.minutes) + " : " + String(coords.timestamp.seconds) + " : " + String(coords.timestamp.milliseconds);
           dataOutputString += ",";
 
