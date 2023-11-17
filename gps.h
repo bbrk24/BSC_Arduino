@@ -12,7 +12,7 @@ private:
   TwoWire* m_i2c;
   // 0 = no I2C connection
   // 1... = various stages of GNSS configuration
-  uint8_t m_phase;
+  uint8_t m_phase; //Keeps track of initialization phase
 public:
   /**
    * @param[in] theI2C Pointer to a TwoWire instance representing the I2C interface. Must be valid
@@ -45,7 +45,7 @@ public:
       return Status::ACTIVE;
     }
   }
-  
+  // This goes through a series of steps to initialize the GPS Module. Once 6 is completed, initialization is done
   // WARNING: This may hang if connections cannot be established! Use it with care
   void initialize() {
 
