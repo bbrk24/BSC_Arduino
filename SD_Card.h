@@ -76,6 +76,7 @@ class SDCard {
     void initialize() { // this is equivalent to setup()
 	if (!SD.begin(M_CHIP_SELECT)) {
 		Serial.println("SD Card not detected");
+		while (1);
 	} else {
 		Serial.println("SD Card detected and initalized");
 		m_sdCardFile = SD.open(m_filename + ".csv", FILE_WRITE);
