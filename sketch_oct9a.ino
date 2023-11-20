@@ -74,6 +74,8 @@ static TwoWire gpsI2C(
 );
 GPS gps(&gpsI2C);
 
+SDCard card;
+
 #ifdef _SERCOM_CLASS_
 extern "C" {
 void SERCOM1_Handler(void) {
@@ -111,8 +113,10 @@ void updateGPSLEDs() {
   digitalWrite(6, good);
 }
 
-// TODO: updateSDCardLEDs
-// Without having an SD card implementation, I don't even know what to check.
+void updateSDCardLEDs() {
+  bool good = card.getStatus() == SDCard::ACTIVE;
+  digitalWrite(5, good);
+}
 
 void setup() {
 #ifdef _SERCOM_CLASS_
