@@ -93,7 +93,6 @@ class SDCard {
         return Status::NOT_CONNECTED;
       }
 
-      // TODO: which should take precedence?
       if (!m_proven) {
         return Status::UNTESTED;
       } else if (!m_sdCardFile) {
@@ -166,15 +165,13 @@ class SDCard {
       if (!m_begun) {
         m_begun = SD.begin(M_CHIP_SELECT);
       }
-      
-      if (m_begun) {
-        if (!m_proven) {
-          m_proven = selfTest();
-        }
 
-        if (!m_sdCardFile) {
-          m_sdCardFile = SD.open(M_FILE_NAME, FILE_WRITE);
-        }
+      if (m_begun && !m_proven) {
+        m_proven = selfTest();
+      }
+
+      if (m_proven && !m_sdCardFile) {
+        m_sdCardFile = SD.open(M_FILE_NAME, FILE_WRITE);
       }
     }
 
