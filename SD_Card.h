@@ -4,16 +4,104 @@
 #include "gps.h"
 #include "imu.h"
 
-#define CAPSULE 2
-
 #pragma once
 
 class SDCard {
   private:
     File m_sdCardFile;
-    static const int M_CHIP_SELECT = 4; // this is not the final value - SDCARD_SS_PIN is the correct one for the MKR Zero
-    static const String M_FILE_NAME = "rocketry_data";
+    bool m_begun; // SPI communications have been established
+    bool m_proven; // The self-test passed
+
+    static const int M_CHIP_SELECT = SDCARD_SS_PIN;
+    static constexpr const char* M_FILE_NAME = "CAPS_INF.CSV";
+
+    // Write some random data to a file and see if we can read it back
+    bool selfTest() {
+      if (!m_begun) {
+        return false;
+      }
+
+      // Close the file for now to open a new one
+      bool open = (bool)m_sdCardFile;
+      if (open) {
+        m_sdCardFile.close();
+      }
+
+      // Perform the test:
+      // 1. Generate 64 random bytes
+      // 2. Write those bytes to a file
+      // 3. Close and reopen the file
+      // 4. Compare the file contents to the original buffer
+
+      // 1.
+      // Seed RNG as suggested by the documentation
+      randomSeed(analogRead(0));
+
+      const size_t RANDOM_BUFFER_SIZE = 64;
+      char data[RANDOM_BUFFER_SIZE];
+      for (int i = 0; i < RANDOM_BUFFER_SIZE; ++i) {
+        data[i] = random(256);
+      }
+
+      // 2.
+      // FILE_WRITE appends to the file if it exists, rather than overwriting it, so delete the file
+      // before writing to it
+      const char* SELFTEST_FILE_NAME = "selftest";
+      if (SD.exists(SELFTEST_FILE_NAME)) {
+        SD.remove(SELFTEST_FILE_NAME);
+      }
+
+      File randomFile = SD.open(SELFTEST_FILE_NAME, FILE_WRITE);
+      randomFile.write(data);
+
+      // 3.
+      randomFile.close();
+      randomFile = SD.open(SELFTEST_FILE_NAME, FILE_READ);
+
+      // 4.
+      // Initialize readBack to all zeroes so that we don't get garbage data if the read failed
+      char readBack[RANDOM_BUFFER_SIZE] = {0};
+      randomFile.read(readBack, RANDOM_BUFFER_SIZE);
+      bool areDifferent = memcmp(data, readBack, RANDOM_BUFFER_SIZE);
+
+      // Cleanup
+      // Close the random file again
+      randomFile.close();
+      // If the data file was open before, re-open it
+      if (open) {
+        m_sdCardFile = SD.open(M_FILE_NAME, FILE_WRITE);
+      }
+
+      return !areDifferent;
+    }
   public:
+    SDCard() : m_sdCardFile(), m_begun(false), m_proven(false) {}
+
+    enum Status {
+      /** SPI communications have not yet been established. */
+      NOT_CONNECTED,
+      /** The SD card is connected, but the file is not open. */
+      FILE_CLOSED,
+      /** The SD card is connected, but the self-test has not run successfully. */
+      UNTESTED,
+      /** The SD card is ready to write to. */
+      ACTIVE,
+    };
+
+    Status getStatus() {
+      if (!m_begun) {
+        return Status::NOT_CONNECTED;
+      }
+
+      if (!m_proven) {
+        return Status::UNTESTED;
+      } else if (!m_sdCardFile) {
+        return Status::FILE_CLOSED;
+      }
+
+      return Status::ACTIVE;
+    }
+
     void writeToCSV( // this is equivalent to loop()
       const GPS::Coordinates& coords,
       const IMU::vector3& accel,
@@ -74,13 +162,17 @@ class SDCard {
       }
 
     void initialize() { // this is equivalent to setup()
-	if (!SD.begin(M_CHIP_SELECT)) {
-		Serial.println("SD Card not detected");
-		while (1);
-	} else {
-		Serial.println("SD Card detected and initalized");
-		m_sdCardFile = SD.open(m_filename + ".csv", FILE_WRITE);
-	}
+      if (!m_begun) {
+        m_begun = SD.begin(M_CHIP_SELECT);
+      }
+
+      if (m_begun && !m_proven) {
+        m_proven = selfTest();
+      }
+
+      if (m_proven && !m_sdCardFile) {
+        m_sdCardFile = SD.open(M_FILE_NAME, FILE_WRITE);
+      }
     }
 
     void closeFile() {

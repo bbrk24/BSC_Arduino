@@ -9,9 +9,12 @@ Altimeter alt;
 void setup() {
   pinMode(8, OUTPUT);
   digitalWrite(8, LOW); //Sets up pin 8 to be the signal to eject capsules
+  pinMode(9, OUTPUT);
+  digitalWrite(9, LOW); // Sets up pin 9 for status LEDs
   do { //Until the altimeter is active, attempt to initialize
     alt.initialize();
   } while (alt.getStatus() != Altimeter::ACTIVE);
+  digitalWrite(9, HIGH);
 }
 
 enum Mode {
