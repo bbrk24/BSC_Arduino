@@ -164,6 +164,9 @@ void setup() {
 #endif
   updateSensorLEDs();
 
+  card.initialize();
+  updateSDCardLEDs();
+
   gps.initialize();
   updateGPSLEDs();
 
@@ -212,7 +215,23 @@ void loop() {
 
   yield();
 
-  // TODO: Write data to SD card
+  if (card.getStatus() != SDCard::ACTIVE) {
+    card.initialize();
+    updateSDCardLEDs();
+  }
+  card.writeToCSV(
+    last_coords,
+    last_accel,
+    last_alt,
+#if CAPSULE == 2
+    last_voc,
+    last_humid,
+    last_temp,
+#endif
+    last_gyro
+  );
+
+  yield();
 }
 
 void gps_loop() {
