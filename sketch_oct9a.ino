@@ -121,14 +121,6 @@ void updateSDCardLEDs() {
 }
 
 void setup() {
-  // Since the RTS and CTS pins are private, I have to initialize a whole new object, rather than
-  // just assigning those two pins
-  Serial1 = Uart(
-    // First five arguments are the same as default
-    &sercom5, PIN_SERIAL1_RX, PIN_SERIAL1_TX, PAD_SERIAL1_RX, PAD_SERIAL1_TX,
-    // and then:
-    /*rts:*/A1, /*cts:*/A2
-  );
   Serial1.begin(9600);
 
 #if CAPSULE == 2
