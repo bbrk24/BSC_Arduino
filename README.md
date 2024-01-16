@@ -11,7 +11,7 @@ The Arduino IDE has two requirements on the .ino file(s) in a folder:
 - One of them must have the same name as the folder itself
 - All of them will be compiled and uploaded, not just one
 
-The capsule microcontroller code is in `sketch_oct9a.ino` to satisfy the first requirement. To satisfy the second requirement, the payload bay microcontroller code is wrapped in `#if false`. When uploading to the payload bay micro rather than the capsule, switch the `#if false` and `#if true` at the top of the .ino files.
+The capsule microcontroller code is in `sketch_oct9a.ino` to satisfy the first requirement. To satisfy the second requirement, the payload bay microcontroller code and all test scripts are wrapped in `#if false`. Before uploading any code, make sure the file you intend to run has `#if true` and all other files have `#if false`.
 
 ## Note on wait loops
 
