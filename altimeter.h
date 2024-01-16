@@ -46,6 +46,11 @@ public:
     }
   }
 
+  void setSeaLevel(float currSeaLevel) {
+    m_seaLevel = currSeaLevel;
+    m_reasonable = true;
+  }
+
   /**
    * Get the current altitude. Blocks until a value is available.
    * @return AGL in feet.
