@@ -97,12 +97,15 @@ public:
     };
     uint32_t rawValue;
 
+    // Explicitly default parameterless constructor and copy and move operators
+    // The presence of other constructors and operator=s below would mean these don't exist
     Timestamp() = default;
     Timestamp(const Timestamp&) = default;
     Timestamp(Timestamp&&) = default;
     Timestamp& operator=(const Timestamp&) = default;
     Timestamp& operator=(Timestamp&&) = default;
 
+    // Some things to make working with volatile Timestamps easier
     Timestamp(const volatile Timestamp& other) noexcept : rawValue(other.rawValue) {}
     Timestamp(volatile Timestamp&& other) noexcept : rawValue(other.rawValue) {}
 
@@ -128,6 +131,7 @@ public:
 
     Timestamp timestamp;
 
+    // Same idea as with Timestamp above
     Coordinates() = default;
     Coordinates(const Coordinates&) = default;
     Coordinates(Coordinates&&) = default;
@@ -157,7 +161,7 @@ public:
    * @param[out] loc Pointer to location data. Must not be nullptr.
    * @return A boolean indicating whether the values were successfully read.
    */
-  bool getLocation(Coordinates* loc) {
+  bool getLocation(volatile Coordinates* loc) {
     bool success = m_gnss.getPVT();
     if (success) {
       loc->longitude = m_gnss.getLongitude();

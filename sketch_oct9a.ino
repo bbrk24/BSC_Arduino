@@ -175,11 +175,7 @@ void loop() {
     updateSensorLEDs();
   }
 
-  float humid, temp;
-  if (hum.getValues(&humid, &temp)) {
-    last_humid = humid;
-    last_temp = temp;
-  }
+  hum.getValues(&last_humid, &last_temp);
 
   // Requesting data from the humidity sensor can be relatively slow
   yield();
@@ -190,6 +186,7 @@ void loop() {
     updateSensorLEDs();
   }
 
+  // This has to be done like this because imu.getValues cannot take a pointer to a volatile vector3
   IMU::vector3 accel, gyro;
   if (imu.getValues(&accel, &gyro)) {
     last_accel = accel;
@@ -235,10 +232,7 @@ void gps_loop() {
     updateGPSLEDs();
   }
 
-  GPS::Coordinates c;
-  if (gps.getLocation(&c)) {
-    last_coords = c;
-  }
+  gps.getLocation(&last_coords);
 
   const unsigned long GPS_FREQ = 18;
   delay(1000 / GPS_FREQ);
