@@ -83,29 +83,77 @@ public:
 #undef ENABLE_PHASE
   }
 
-  using Timestamp = struct {
-    unsigned int milliseconds : 10;
-    unsigned int seconds : 6;
-    unsigned int minutes : 6;
-    unsigned int hours : 5;
-    // Storage layout:
-    // 31              23              15               7             0
-    // +- - - - - - - -+- - - - - - - -+- - - - - - - -+- - - - - - - -+
-    // | (zero)  |  hours  |  minutes  |  seconds  |   milliseconds    |
-    // +- - - - - - - -+- - - - - - - -+- - - - - - - -+- - - - - - - -+
+  union Timestamp {
+    struct {
+      unsigned int milliseconds : 10;
+      unsigned int seconds : 6;
+      unsigned int minutes : 6;
+      unsigned int hours : 5;
+      // Storage layout:
+      // 31              23              15               7             0
+      // +- - - - - - - -+- - - - - - - -+- - - - - - - -+- - - - - - - -+
+      // | (zero)  |  hours  |  minutes  |  seconds  |   milliseconds    |
+      // +- - - - - - - -+- - - - - - - -+- - - - - - - -+- - - - - - - -+
+    };
+    uint32_t rawValue;
+
+    // Explicitly default parameterless constructor and copy and move operators
+    // The presence of other constructors and operator=s below would mean these don't exist
+    Timestamp() = default;
+    Timestamp(const Timestamp&) = default;
+    Timestamp(Timestamp&&) = default;
+    Timestamp& operator=(const Timestamp&) = default;
+    Timestamp& operator=(Timestamp&&) = default;
+
+    // Some things to make working with volatile Timestamps easier
+    Timestamp(const volatile Timestamp& other) noexcept : rawValue(other.rawValue) {}
+    Timestamp(volatile Timestamp&& other) noexcept : rawValue(other.rawValue) {}
+
+    volatile Timestamp& operator=(const Timestamp& other) volatile noexcept {
+      this->rawValue = other.rawValue;
+      return *this;
+    }
+    volatile Timestamp& operator=(Timestamp&& other) volatile noexcept {
+      this->rawValue = other.rawValue;
+      return *this;
+    }
   };
 
-  using Coordinates = struct {
-    /** Longitude, in degrees */
-    double longitude;
-    /** Latitude, in degrees */
-    double latitude;
+  struct Coordinates {
+    /** Longitude, in 10^-7 degrees */
+    int32_t longitude;
+    /** Latitude, in 10^-7 degrees */
+    int32_t latitude;
     /** Altitude, in feet above mean sea level (not AGL!) */
     float altitudeMSL;
     /** Number of visible satellites */
     uint8_t numSatellites;
 
     Timestamp timestamp;
+
+    // Same idea as with Timestamp above
+    Coordinates() = default;
+    Coordinates(const Coordinates&) = default;
+    Coordinates(Coordinates&&) = default;
+    Coordinates& operator=(const Coordinates&) = default;
+    Coordinates& operator=(Coordinates&&) = default;
+
+    volatile Coordinates& operator=(const Coordinates& other) volatile noexcept {
+      this->longitude = other.longitude;
+      this->latitude = other.latitude;
+      this->altitudeMSL = other.altitudeMSL;
+      this->numSatellites = other.numSatellites;
+      this->timestamp = other.timestamp;
+      return *this;
+    }
+    volatile Coordinates& operator=(Coordinates&& other) volatile noexcept {
+      this->longitude = other.longitude;
+      this->latitude = other.latitude;
+      this->altitudeMSL = other.altitudeMSL;
+      this->numSatellites = other.numSatellites;
+      this->timestamp = other.timestamp;
+      return *this;
+    }
   };
 
   /**
@@ -113,11 +161,11 @@ public:
    * @param[out] loc Pointer to location data. Must not be nullptr.
    * @return A boolean indicating whether the values were successfully read.
    */
-  bool getLocation(Coordinates* loc) {
+  bool getLocation(volatile Coordinates* loc) {
     bool success = m_gnss.getPVT();
     if (success) {
-      loc->longitude = 1.0e-7 * (double)m_gnss.getLongitude();
-      loc->latitude = 1.0e-7 * (double)m_gnss.getLatitude();
+      loc->longitude = m_gnss.getLongitude();
+      loc->latitude = m_gnss.getLatitude();
 
       const float FEET_PER_MILLIMETER = 0.0032808399F;
       loc->altitudeMSL = FEET_PER_MILLIMETER * (float)m_gnss.getAltitudeMSL();

@@ -8,13 +8,33 @@ private:
   bool m_begun;
   bool m_reasonableGravity;
 public:
-  using vector3 = union {
+  union vector3 {
     float data[3];
     struct {
       float x;
       float y;
       float z;
     };
+
+    // C++ boilerplate nonsense
+    vector3() = default;
+    vector3(const vector3&) = default;
+    vector3(vector3&&) = default;
+    vector3& operator=(const vector3&) = default;
+    vector3& operator=(vector3&&) = default;
+
+    volatile vector3& operator=(const vector3& other) volatile noexcept {
+      this->x = other.x;
+      this->y = other.y;
+      this->z = other.z;
+      return *this;
+    }
+    volatile vector3& operator=(vector3&& other) volatile noexcept {
+      this->x = other.x;
+      this->y = other.y;
+      this->z = other.z;
+      return *this;
+    }
   };
 
   /**

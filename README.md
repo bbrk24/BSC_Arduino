@@ -2,7 +2,7 @@
 
 This repo contains the Arduino code for the BSC 2023-24 team.
 
-In order to compile this, you will need to install the Arduino libraries `Adafruit BMP3XX Library`, `Adafruit LSM9DS1 Library`, `Adafruit SHT4x Library`, and `SparkFun u-blox GNSS v3`. The circuit schematic is included in the .ms14 files. The relay in PayloadBay.ms14 is a placeholder relay and not necessarily representative of the actual relay that will be used.
+In order to compile this, you will need to install the Arduino libraries `Scheduler`, `Adafruit BMP3XX Library`, `Adafruit LSM9DS1 Library`, `Adafruit SHT4x Library`, and `SparkFun u-blox GNSS v3`. The circuit schematic is included in the .ms14 files. The relay in PayloadBay.ms14 is a placeholder relay and not necessarily representative of the actual relay that will be used.
 
 ## On the `.ino` files
 
@@ -17,5 +17,3 @@ The capsule microcontroller code is in `sketch_oct9a.ino` to satisfy the first r
 
 For the capsule code, every wait loop (such as `while (!ready) {}`) must contain a call to `yield()` or `delay()`. Do not leave the body empty (as `{}`) or call `delayMicroseconds()`, as these both block the whole chip. `yield()` and `delay()` both allow other threads to make progress.
 The exception to this is loops immediately inside of `setup()`, as the threads do not begin until that function ends.
-
-> At the time of writing, this project is deployed to a Nano board that does not have SAMD and therefore does not support the Scheduler library. The final product will use a SAMD board and have at least two threads, one for the sensors and one for the radio.

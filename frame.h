@@ -73,26 +73,29 @@ constexpr size_t FRAME_SIZE() {
 
 int8_t _radiansToCappedDegrees(float rad) {
   float deg = degrees(rad);
-  if (abs(deg) > 127.0F) {
+  if (fabsf(deg) > 127.0F) {
     return -128;
   } else {
     return (int8_t)deg;
   }
 }
 
-Frame createFrame(
-  const GPS::Coordinates& coords,
-  const IMU::vector3& accel,
-  const IMU::vector3& gyro,
-  float altitude,
+inline Frame createFrame(
+  const volatile GPS::Coordinates& coords,
+  const volatile IMU::vector3& accel,
+  const volatile IMU::vector3& gyro,
+  float altitude
+#if CAPSULE == 2
+  ,
   int analogReading,
   float humidity,
   float temperature
+#endif
 ) noexcept {
   // Weird C syntax that lets you label each argument to the struct initialization
   return (Frame){
-    .latitude = (int32_t)(coords.latitude * 10e+7),
-    .longitude = (int32_t)(coords.longitude * 10e+7),
+    .latitude = coords.latitude,
+    .longitude = coords.longitude,
     .timestamp = GPS::getTotalMS(coords.timestamp),
     .numSat = coords.numSatellites,
     .pitch = _radiansToCappedDegrees(gyro.x),

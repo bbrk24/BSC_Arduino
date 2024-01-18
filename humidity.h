@@ -87,8 +87,8 @@ public:
    * @return A boolean indicating whether the values were successfully read.
    */
   bool getValues(
-    float* humidity,
-    float* temperature
+    volatile float* humidity,
+    volatile float* temperature
   ) {
     if (humidity == nullptr && temperature == nullptr) {
       // there's nothing to try
@@ -103,16 +103,22 @@ public:
     if (temperature == nullptr) {
       sensors_event_t humidEvent;
       success = m_sensor.getEvent(&humidEvent, nullptr);
-      *humidity = m_lastHumid = humidEvent.relative_humidity;
+      if (success) {
+        *humidity = m_lastHumid = humidEvent.relative_humidity;
+      }
     } else if (humidity == nullptr) {
       sensors_event_t tempEvent;
       success = m_sensor.getEvent(nullptr, &tempEvent);
-      *temperature = m_lastTemp = tempEvent.temperature;
+      if (success) {
+        *temperature = m_lastTemp = tempEvent.temperature;
+      }
     } else {
       sensors_event_t humidEvent, tempEvent;
       success = m_sensor.getEvent(&humidEvent, &tempEvent);
-      *humidity = m_lastHumid = humidEvent.relative_humidity;
-      *temperature = m_lastTemp = tempEvent.temperature;
+      if (success) {
+        *humidity = m_lastHumid = humidEvent.relative_humidity;
+        *temperature = m_lastTemp = tempEvent.temperature;
+      }
     }
 
     if (heater != SHT4X_NO_HEATER) {
