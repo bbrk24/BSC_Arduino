@@ -1,5 +1,10 @@
 #if false
 
+void setup() {
+	Serial.begin(9600);
+	while (!Serial) { /* do nothing here */ }
+}
+
 void loop() {
   delay(500);
 
