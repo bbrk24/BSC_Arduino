@@ -24,17 +24,18 @@ void loop() {
     backoff *= 2;
     alt.initialize();
   } else {
-    float altitude = alt.getAltituide();
     const float SEA_LEVEL_PRESSURE = 1013.25F; // sea level pressure in hPa
-    setSeaLevel(SEA_LEVEL_PRESSURE);
+    alt.setSeaLevel(SEA_LEVEL_PRESSURE);
+    float altitude = alt.getAltitude();
 
-    if (altitude > m_seaLevel) {
+    // checks if we're above our origin launch altitude
+    if (altitude > 0) {
       Serial.print("Altitude: ");
       Serial.print(altitude);
       Serial.println("m");
       delay(102);
     } else {
-      Serial.print("No values available to be read. Trying again in ");
+      Serial.print("Rocket has not gone up into the air. Trying again in ");
       Serial.print(backoff);
       Serial.println("ms...");
       delay(backoff);
