@@ -24,10 +24,11 @@ void loop() {
     backoff *= 2;
     alt.initialize();
   } else {
-    float altitude;
-    setSeaLevel(altitude);
+    float altitude = alt.getAltituide();
+    const float SEA_LEVEL_PRESSURE = 1013.25F; // sea level pressure in hPa
+    setSeaLevel(SEA_LEVEL_PRESSURE);
 
-    if (getAltitude() > m_seaLevel) {
+    if (altitude > m_seaLevel) {
       Serial.print("Altitude: ");
       Serial.print(altitude);
       Serial.println("m");

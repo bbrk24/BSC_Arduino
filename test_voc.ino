@@ -1,11 +1,5 @@
 #if false
 
-void setup() {
-  Serial.begin(9600);
-  while (!Serial) { /* Wait for Serial monitor to connect */ }
-  Serial.println("Connecting to sensor...");
-}
-
 void loop() {
   delay(500);
 
