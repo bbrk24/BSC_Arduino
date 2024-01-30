@@ -7,7 +7,7 @@
 SDCard card;
 
 // Keep trying to initialize the SD card until it works
-void keepInitializingCard() {
+void initializeCard() {
     SDCard::Status status;
     do {
         status = card.getStatus();
@@ -31,7 +31,7 @@ void keepInitializingCard() {
 void setup() {
     Serial.begin(9600);
     while (!Serial) { /* wait for serial monitor to connect */ }
-    keepInitializingCard();
+    initializeCard();
 
     // Write two lines of fake data
     GPS::Coordinates fakeCoords;
