@@ -15,6 +15,15 @@ class SDCard {
     static const int M_CHIP_SELECT = SDCARD_SS_PIN;
     static constexpr const char* M_FILE_NAME = "CAPS_INF.CSV";
 
+    static constexpr const char* M_HEADERS =
+      "Latitude,Longitude,Altitude (MSL),Satellites,Timestamp,Accel X,Accel Y,Accel Z,Altitude (AGL),"
+      // Fun C fact: if you have multiple string literals with nothing but comments and whitespace
+      // between them, the compiler treats them as one long string literal
+#if CAPSULE == 2
+      "VOC Reading,Humidity,Temperature,"
+#endif
+      "Gyro X,Gyro Y,Gyro Z";
+
     // Write some random data to a file and see if we can read it back
     bool selfTest() {
       if (!m_begun) {
@@ -52,7 +61,7 @@ class SDCard {
       }
 
       File randomFile = SD.open(SELFTEST_FILE_NAME, FILE_WRITE);
-      randomFile.write(data);
+      randomFile.write(data, RANDOM_BUFFER_SIZE);
 
       // 3.
       randomFile.close();
@@ -124,7 +133,7 @@ class SDCard {
           dataOutputString += ",";
           dataOutputString += String(coords.numSatellites);
           dataOutputString += ",";
-          dataOutputString += String(coords.timestamp.hours) + " : " + String(coords.timestamp.minutes) + " : " + String(coords.timestamp.seconds) + " : " + String(coords.timestamp.milliseconds);
+          dataOutputString += String(coords.timestamp.hours) + ":" + String(coords.timestamp.minutes) + ":" + String(coords.timestamp.seconds) + ":" + String(coords.timestamp.milliseconds);
           dataOutputString += ",";
 
           dataOutputString += String(accel.x);
@@ -171,7 +180,13 @@ class SDCard {
       }
 
       if (m_proven && !m_sdCardFile) {
+        bool alreadyExists = SD.exists(M_FILE_NAME);
         m_sdCardFile = SD.open(M_FILE_NAME, FILE_WRITE);
+        // If the file is being created by this action, we need to create headers
+        // If the file already exists, assume it already has headers.
+        if ((bool)m_sdCardFile && !alreadyExists) {
+          m_sdCardFile.println(M_HEADERS);
+        }
       }
     }
 
