@@ -26,6 +26,26 @@ public:
     }
     return decCount > BUFFER_SIZE/2;
   }
+  float maximum() const noexcept {
+    float currMax = -INFINITY;
+    for (int i = 0; i < BUFFER_SIZE; ++i) {
+      if (m_data[i] > currMax) {
+        currMax = m_data[i];
+      }
+    }
+    return currMax;
+  }
+
+  float minimum() const noexcept {
+    float currMin = INFINITY;
+    for (int i = 0; i < BUFFER_SIZE; ++i) {
+      if (m_data[i] < currMin) {
+        currMin = m_data[i];
+      }
+    }
+    return currMin;
+  }
+
 private:
   float m_data[BUFFER_SIZE];
   int m_lastIndex;
