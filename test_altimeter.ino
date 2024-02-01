@@ -19,7 +19,7 @@ void setup() {
   card.initialize();
 
   // Loop for 20 minutes
-  while (millis() < 20 * 10 * 1000) {
+  while (millis() < 20 * 60 * 1000) {
     // Exponential backoff: each time it waits longer than the last.
     // That way, if a wire is loose or missing, it doesn't flood the console with messages.
     static unsigned int backoff = 100;
