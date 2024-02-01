@@ -17,6 +17,9 @@
 #include "frame.h"
 #include "SD_Card.h"
 
+// Baud rate for radio UART
+const unsigned long RADIO_BAUD = 230400;
+
 // How many times per second the data will be sent over radio.
 // If this is more than ~18, some packets will have outdated GPS info.
 // If this is more than ~200, the radio will be rate-limited by the sensors.
@@ -159,7 +162,7 @@ void readGPS() {
   gps.getLocation(&last_coords);
 }
 
-void readOtherSensors() {
+void readAltIMU() {
   if (imu.getStatus() != IMU::ACTIVE) {
     imu.initialize();
     updateSensorLEDs();
@@ -206,7 +209,7 @@ void sendDataToRadio() {
 }
 
 void setup() {
-  Serial1.begin(230400);
+  Serial1.begin(RADIO_BAUD);
 
 #if CAPSULE == 2
   // Pin A6: analog input from VOC sensor
@@ -249,7 +252,7 @@ void setup() {
         readAtmospheric();
 #endif
         readGPS();
-        readOtherSensors();
+        readAltIMU();
         sendDataToRadio();
       } else {
         // unrecognized command -- send back all zeros
@@ -271,7 +274,7 @@ void loop() {
   yield();
 #endif
 
-  readOtherSensors();
+  readAltIMU();
   yield();
 
   // Commenting out SD code for now until it can be tested
