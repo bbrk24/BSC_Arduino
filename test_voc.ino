@@ -1,9 +1,9 @@
-#if true
+#if false
 
 void setup() {
 	Serial.begin(9600);
-  // this uses the AREF pin to use 3.3 V instead of 5.0 V
-  analogReference(EXTERNAL);
+  	// this uses the AREF pin to use 3.3 V instead of 5.0 V
+  	analogReference(EXTERNAL);
 	while (!Serial) { /* do nothing here */ }
 }
 
