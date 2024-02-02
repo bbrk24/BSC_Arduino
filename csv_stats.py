@@ -1,7 +1,7 @@
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
-from sklearn.metrics import r2_score, mean_squared_error
+from sklearn.metrics import r2_score
 from sklearn.linear_model import LinearRegression
 
 # read in rocketry CSV file output by Arduino
@@ -9,11 +9,11 @@ from sklearn.linear_model import LinearRegression
 capsule_one_header_names = ["Latitude", "Longitude", "Altitude (MSL)", "Satellites", "Timestamp", "Accel X", "Accel Y", "Accel Z", "Altitude (AGL)", "Gyro X", "Gyro Y", "Gyro Z"]
 capsule_two_header_names = ["VOC Reading", "Humidity", "Temperature"]
 
-csv_file_dataframe = pd.read_csv("CAPS_INF.CSV", header=0)
+csv_file_dataframe = pd.read_csv("CAPS_INF.CSV", header = 0)
 
 # checks to see if capsule two columns are in the CSV file
 if set(capsule_two_header_names).issubset(csv_file_dataframe.iloc[0]):
-    csv_file_dataframe = pd.read_csv("CAPS_INV.CSV", header=0)
+    csv_file_dataframe = pd.read_csv("CAPS_INV.CSV", header = 0)
 else:
     print("Capsule two columns not found, handling alignment...")
 
@@ -25,7 +25,7 @@ normalizedLongitude = csv_file_dataframe["Longitude"] / pow(10, 7)
 
 # picks the column data to plot with x's
 altitude_column = "Altitude (AGL)"
-csv_file_dataframe[altitude_column].plot(marker="x")
+csv_file_dataframe[altitude_column].plot(marker = "x")
 
 # Create X and Y arrays for linear regression
 X = np.arange(len(csv_file_dataframe)).reshape(-1, 1)
@@ -38,12 +38,13 @@ model.fit(X, Y)
 # Predict Y values using the model
 Y_pred = model.predict(X)
 
-# Calculate R^2 value and MSE
+# Calculate R^2 value and slope
 r2 = r2_score(Y, Y_pred)
-mse = mean_squared_error(Y, Y_pred)
+# I have no earthly idea why the slope is defined like this, but this is what the internet said
+slope_output = model.coef_[0][0]
 
 # Plot the linear regression line
-plt.plot(X, Y_pred, color='red', label=f'Linear Regression\nR^2 = {r2:.2f}\nMSE = {mse:.2f}')
+plt.plot(X, Y_pred, color='red', label=f'Linear Regression\nR^2 = {r2:.5f}\nSlope (ft/min) = {slope_output * 60:.5f}')
 
 # Display other plot details
 plt.xlabel("Row Index")
