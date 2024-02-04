@@ -18,8 +18,8 @@ void setup() {
   alt.initialize();
   card.initialize();
 
-  // Loop for 20 minutes
-  while (millis() < 20 * 60 * 1000) {
+  // Loop for an hour
+  while (millis() < 3600000) {
     // Exponential backoff: each time it waits longer than the last.
     // That way, if a wire is loose or missing, it doesn't flood the console with messages.
     static unsigned int backoff = 100;
@@ -42,18 +42,14 @@ void setup() {
       Serial.println(buf.minimum());
 
       // checks if we're above our origin launch altitude
-      if (altitude > -2) {
+      if (altitude > -3) {
         Serial.print("Altitude: ");
         Serial.print(altitude);
         Serial.println(" ft");
-        delay(1000);
       } else {
-        Serial.print("Rocket has not gone up into the air. Trying again in ");
-        Serial.print(backoff);
-        Serial.println("ms...");
-        delay(backoff);
-        // backoff *= 2;
+        Serial.print("Rocket has not gone up into the air. Trying again in 1 s...");
       }
+      delay(1000);
 
       GPS::Coordinates fakeCoords = {0};
       IMU::vector3 fakeAccel = {0};
