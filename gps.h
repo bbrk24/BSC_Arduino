@@ -49,48 +49,48 @@ public:
   // WARNING: This may hang if connections cannot be established! Use it with care
   void initialize() {
 
-    Serial.print("Entering initialize()...");
+    //Serial.print("Entering initialize()...");
 
 #define ENABLE_PHASE(gnss, enable) \
   if (!m_gnss.enableGNSS(enable, gnss)) { \
-    Serial.print("Could not enable gnss..."); \
+    /*Serial.print("Could not enable gnss...");*/ \
     break; \
   } \
-  Serial.print("Increasing m_phase..."); \
+  //Serial.print("Increasing m_phase..."); \
   m_phase++; \
 
-    Serial.print("Made it past ENABLE_PHASE define...");
+    //Serial.print("Made it past ENABLE_PHASE define...");
 
     switch (m_phase) {
     case 0:
-      Serial.print("Has not started I2C comms, attempting now...");
+      //Serial.print("Has not started I2C comms, attempting now...");
       if (!m_gnss.begin(*m_i2c)) {
-        Serial.print("Could not establish I2C...");
+        //Serial.print("Could not establish I2C...");
         break;
       }
-      Serial.print("I2C communication established...");
+      //Serial.print("I2C communication established...");
       m_phase = 1;
     case 1:
       // Possibly not necessary, but recommended by the documentation to do just in case
       ENABLE_PHASE(SFE_UBLOX_GNSS_ID_GPS, true);
-      Serial.print("Enabling GPS...");
+      //Serial.print("Enabling GPS...");
     case 2:
       // Disabled in a specific order so that all intermediate configurations are valid for both
       // SAM-M10Q and ZOE-M8Q (we've been going back and forth on the two)
       ENABLE_PHASE(SFE_UBLOX_GNSS_ID_SBAS, false);
-      Serial.print("Disabling SBAS...");
+      //Serial.print("Disabling SBAS...");
     case 3:
       ENABLE_PHASE(SFE_UBLOX_GNSS_ID_BEIDOU, false);
-      Serial.print("Disabling BEIDOU...");
+      //Serial.print("Disabling BEIDOU...");
     case 4:
       ENABLE_PHASE(SFE_UBLOX_GNSS_ID_QZSS, false);
-      Serial.print("Disabling QZSS...");
+      //Serial.print("Disabling QZSS...");
     case 5:
       ENABLE_PHASE(SFE_UBLOX_GNSS_ID_GLONASS, false);
-      Serial.print("Disabling GLONASS...");
+      //Serial.print("Disabling GLONASS...");
     case 6:
       ENABLE_PHASE(SFE_UBLOX_GNSS_ID_GALILEO, false);
-      Serial.print("Disabling GALILEO...");
+      //Serial.print("Disabling GALILEO...");
     default:
       break;
     }
