@@ -133,23 +133,12 @@ plt.show()
 # mean sea level altitude plotting
 
 altitude_msl_column = "Altitude (MSL)"
-altitude_msl_output = csv_file_dataframe[altitude_msl_column].values.reshape(-1, 1)
 
-# Create a linear regression model
-altimeter_msl_model_regression = LinearRegression()
-altimeter_msl_model_regression.fit(row_index, altitude_msl_output)
-
-# Predict Y values using the model
-altimeter_msl_pred = altimeter_msl_model_regression.predict(row_index)
-
-# # Calculate R^2 value and slope
-r2_msl = r2_score(altitude_msl_output, altimeter_msl_pred)
-# I have no earthly idea why the slope is defined like this, but this is what the internet said
-slope_msl_output = altimeter_msl_model_regression.coef_[0][0]
+msl_altitude = np.array(msl_altitude)
 
 # Plot the linear regression line
 plt.figure() # this creates a new figure to differentiate between altimeter and IMU graphs
-plt.plot(row_index, altimeter_msl_pred, color='red', label=f'Linear Regression\nR^2 = {r2_msl:.5f}\nSlope (ft/min) = {slope_msl_output * 60:.5f}')
+plt.plot(row_index, msl_altitude)
 
 # Display other plot details
 plt.xlabel("Row Index")
@@ -161,21 +150,11 @@ plt.show()
 # latitude plotting
 
 latitude_column_name = "Latitude"
-latitude_output = csv_file_dataframe[latitude_column_name].values.reshape(-1, 1)
 
-latitude_model_regression = LinearRegression()
-latitude_model_regression.fit(row_index, latitude_output)
-
-# Predict Y values using the model
-latitude_pred = latitude_model_regression.predict(row_index)
-
-# # Calculate R^2 value and slope
-r2_latitude = r2_score(latitude_output, latitude_pred)
-# I have no earthly idea why the slope is defined like this, but this is what the internet said
-slope_latitude_output = latitude_model_regression.coef_[0][0]
+normalized_latitude = np.array(normalized_latitude)
 
 plt.figure()
-plt.plot(row_index, normalized_latitude, color='red', label=f'Linear Regression\nR^2 = {r2_latitude:.5f}\nSlope = {slope_latitude_output:.5f}')
+plt.plot(row_index, normalized_latitude)
 plt.title(f"Plot of Row Index vs {latitude_column_name}")
 plt.xlabel("Row Index")
 plt.ylabel("Latitude")
@@ -185,21 +164,11 @@ plt.show()
 # Longitude plotting
 
 longitude_column_name = "Longitude"
-longitude_output = csv_file_dataframe[longitude_column_name].values.reshape(-1, 1)
 
-longitude_model_regression = LinearRegression()
-longitude_model_regression.fit(row_index, longitude_output)
-
-# Predict Y values using the model
-longitude_pred = longitude_model_regression.predict(row_index)
-
-# # Calculate R^2 value and slope
-r2_longitude = r2_score(longitude_output, longitude_pred)
-# I have no earthly idea why the slope is defined like this, but this is what the internet said
-slope_longitude_output = longitude_model_regression.coef_[0][0]
+normalized_longitude = np.array(normalized_longitude)
 
 plt.figure()
-plt.plot(row_index, normalized_longitude, color='red', label=f'Linear Regression\nR^2 = {r2_longitude:.5f}\nSlope = {slope_longitude_output:.5f}')
+plt.plot(row_index, normalized_longitude)
 plt.title(f"Plot of Row Index vs {longitude_column_name}")
 plt.xlabel("Row Index")
 plt.ylabel("Longitude")
@@ -209,21 +178,9 @@ plt.show()
 # Satellite plotting
 
 satellites_column_name = "Satellites"
-satellite_output = csv_file_dataframe[satellites_column_name].values.reshape(-1, 1)
-
-satellites_model_regression = LinearRegression()
-satellites_model_regression.fit(row_index, satellite_output)
-
-# Predict Y values using the model
-satellites_pred = satellites_model_regression.predict(row_index)
-
-# # Calculate R^2 value and slope
-r2_satellites = r2_score(satellite_output, satellites_pred)
-# I have no earthly idea why the slope is defined like this, but this is what the internet said
-slope_satellites_output = satellites_model_regression.coef_[0][0]
 
 plt.figure()
-plt.plot(row_index, num_satelites, color='red', label=f'Linear Regression\nR^2 = {r2_satellites:.5f}\nSlope = {slope_longitude_output:.5f}')
+plt.plot(row_index, num_satelites)
 plt.title(f"Plot of Row Index vs {satellites_column_name}")
 plt.xlabel("Row Index")
 plt.ylabel("Satellites")
