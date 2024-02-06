@@ -30,7 +30,7 @@ for i in range(len(accel_x)):
 np_array = np.array(accel_magnitude)
 
 # this is the algorithm for the trapezoidal approach to calulating the definite integral
-def definite_integral_calculation(data_array_input, start, stop):
+def definite_integral_calculation(data_array_input: np.ndarray, start: float, stop: float) -> float:
     num_pts = int((stop - start) / DELTA_T)
     trapezoid_width = DELTA_T
 
@@ -38,7 +38,7 @@ def definite_integral_calculation(data_array_input, start, stop):
 
     for i in range(1, num_pts):
         x_i = start + i * DELTA_T
-        integral_sum += data_array_input[x_i]
+        integral_sum += data_array_input[int(x_i)]
     
     result = trapezoid_width * integral_sum
 
