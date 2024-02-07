@@ -61,7 +61,7 @@ class SDCard {
       }
 
       File randomFile = SD.open(SELFTEST_FILE_NAME, FILE_WRITE);
-      randomFile.write(data);
+      randomFile.write(data, RANDOM_BUFFER_SIZE);
 
       // 3.
       randomFile.close();
@@ -133,7 +133,7 @@ class SDCard {
           dataOutputString += ",";
           dataOutputString += String(coords.numSatellites);
           dataOutputString += ",";
-          dataOutputString += String(coords.timestamp.hours) + " : " + String(coords.timestamp.minutes) + " : " + String(coords.timestamp.seconds) + " : " + String(coords.timestamp.milliseconds);
+          dataOutputString += String(coords.timestamp.hours) + ":" + String(coords.timestamp.minutes) + ":" + String(coords.timestamp.seconds) + ":" + String(coords.timestamp.milliseconds);
           dataOutputString += ",";
 
           dataOutputString += String(accel.x);
