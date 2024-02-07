@@ -12,7 +12,8 @@ GPS::Coordinates fakeCoords{0};
 
 IMU::vector3 fakeGyro{0};
 IMU::vector3 testAccel;
-static int shortDelay = 20; //Delay of 20  - 50Hz
+static int shortDelay = 2; //Delay of 2ms - 500Hz
+static int maxTime = 40; //in seconds
 
 // Keep trying to initialize the SD card until it works
 void initializeCard() {
@@ -89,7 +90,8 @@ void loop(){
   testIMU.getValues(&testAccel, nullptr);
   card.writeToCSV(fakeCoords, testAccel, 0, fakeGyro);
 
-  delay(shortDelay); //Taking a measurement at 50Hz, or once every 20 milliseconds
+  //wait until 2 milliseconds have passed, taking into account runtime of code
+  delayMicroseconds((shortDelay * 1000) - (micros() % (shortDelay * 1000))); 
 
   //This is to make the time a lot easier for us to handle
   fakeCoords.timestamp.milliseconds += (unsigned int)shortDelay;
@@ -99,12 +101,10 @@ void loop(){
     fakeCoords.timestamp.milliseconds -= (unsigned int)1000;
   }
 
-  if (fakeCoords.timestamp.seconds >= (unsigned int)20){
+  if (fakeCoords.timestamp.seconds >= (unsigned int)maxTime){
     //Serial.println("File is closed...");
     card.closeFile();
   } 
-
-
 }
 
 #endif
