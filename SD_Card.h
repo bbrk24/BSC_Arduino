@@ -171,7 +171,13 @@ class SDCard {
       }
 
       if (m_proven && !m_sdCardFile) {
+        bool alreadyExists = SD.exists(M_FILE_NAME);
         m_sdCardFile = SD.open(M_FILE_NAME, FILE_WRITE);
+        // If the file is being created by this action, we need to create headers
+        // If the file already exists, assume it already has headers.
+        if ((bool)m_sdCardFile && !alreadyExists) {
+          m_sdCardFile.println(M_HEADERS);
+        }
       }
     }
 

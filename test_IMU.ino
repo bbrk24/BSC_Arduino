@@ -12,8 +12,7 @@ GPS::Coordinates fakeCoords{0};
 
 IMU::vector3 fakeGyro{0};
 IMU::vector3 testAccel;
-static int shortDelay = 2; //Delay of 2ms - 500Hz
-static int maxTime = 40; //in seconds
+static int shortDelay = 2; //This is number of milliseconds per measurement, ie, 2 milliseconds is 500Hz data. Best to keep this a whole number
 
 // Keep trying to initialize the SD card until it works
 void initializeCard() {
