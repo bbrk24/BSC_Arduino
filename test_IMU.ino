@@ -12,7 +12,9 @@ GPS::Coordinates fakeCoords{0};
 
 IMU::vector3 fakeGyro{0};
 IMU::vector3 testAccel;
-static int shortDelay = 2; //This is number of milliseconds per measurement, ie, 2 milliseconds is 500Hz data. Best to keep this a whole number
+static int shortDelay = 5; //This is number of milliseconds per measurement, ie, 2 milliseconds is 500Hz data. Best to keep this a whole number
+static int maxTime = 10;
+bool firstTime = true;
 
 // Keep trying to initialize the SD card until it works
 void initializeCard() {
@@ -44,6 +46,8 @@ void setup() {
   //}
   //Serial.println("Testing SD Card...");
   initializeCard();
+
+  card.writeHeaders();
 
   //Serial.println("Connecting to sensor...");
   testIMU.initialize();
@@ -101,8 +105,13 @@ void loop(){
   }
 
   if (fakeCoords.timestamp.seconds >= (unsigned int)maxTime){
-    //Serial.println("File is closed...");
-    card.closeFile();
+    if (firstTime){
+      //Serial.println("File is closed...");
+      //Serial.flush();
+      card.closeFile();
+      firstTime = false;
+    }
+    
   } 
 }
 

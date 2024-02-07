@@ -15,6 +15,15 @@ class SDCard {
     static const int M_CHIP_SELECT = SDCARD_SS_PIN;
     static constexpr const char* M_FILE_NAME = "CAPS_INF.CSV";
 
+    static constexpr const char* M_HEADERS =
+      "Latitude,Longitude,Altitude (MSL),Satellites,Timestamp,Accel X,Accel Y,Accel Z,Altitude (AGL),"
+      // Fun C fact: if you have multiple string literals with nothing but comments and whitespace
+      // between them, the compiler treats them as one long string literal
+#if CAPSULE == 2
+      "VOC Reading,Humidity,Temperature,"
+#endif
+      "Gyro X,Gyro Y,Gyro Z";
+
     // Write some random data to a file and see if we can read it back
     bool selfTest() {
       if (!m_begun) {
@@ -171,14 +180,20 @@ class SDCard {
       }
 
       if (m_proven && !m_sdCardFile) {
-        bool alreadyExists = SD.exists(M_FILE_NAME);
+        //Serial.println("within proven and csv file not created");
+        //bool alreadyExists = SD.exists(M_FILE_NAME);
         m_sdCardFile = SD.open(M_FILE_NAME, FILE_WRITE);
         // If the file is being created by this action, we need to create headers
         // If the file already exists, assume it already has headers.
-        if ((bool)m_sdCardFile && !alreadyExists) {
-          m_sdCardFile.println(M_HEADERS);
-        }
+        //if ((bool)m_sdCardFile && !alreadyExists) {
+          //Serial.println("within csv file created");
+          //m_sdCardFile.println(M_HEADERS);
+        //}
       }
+    }
+
+    void writeHeaders(){
+      m_sdCardFile.println(M_HEADERS);
     }
 
     void closeFile() {
