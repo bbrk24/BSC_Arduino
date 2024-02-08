@@ -222,6 +222,10 @@ class SDCard {
       }
     }
 
+    void writeHeaders(){
+      m_sdCardFile.println(M_HEADERS);
+    }
+
     void closeFile() {
       m_sdCardFile.close();
     }
