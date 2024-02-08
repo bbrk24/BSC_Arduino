@@ -62,8 +62,8 @@ void loop(){
   //This is to make the time a lot easier for us to handle
   fakeCoords.timestamp.milliseconds += shortDelay;
   if (int(fakeCoords.timestamp.milliseconds) >= 1000){
-    fakeCoords.timestamp.seconds += (unsigned int)1;
-    fakeCoords.timestamp.milliseconds -= (unsigned int)1000;
+    fakeCoords.timestamp.seconds += 1U;
+    fakeCoords.timestamp.milliseconds -= 1000U;
   }
 
   if (fakeCoords.timestamp.seconds >= (unsigned int)maxTime){
