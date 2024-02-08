@@ -12,8 +12,9 @@ GPS::Coordinates fakeCoords{0};
 
 IMU::vector3 fakeGyro{0};
 IMU::vector3 testAccel;
-static int shortDelay = 5; //This is number of milliseconds per measurement, ie, 2 milliseconds is 500Hz data. Best to keep this a whole number
-static int maxTime = 10;
+static unsigned int shortDelay = 5; //THIS IS THE NUMBER OF MILLISECONDS THAT YOU WANT THE IMU TO RECORD TO CSV (ie 5 milliseconds is 200Hz)
+static int maxTime = 10; //THIS IS THE AMOUNT OF TIME YOU WANT THE IMU TO RECORD. YOU CAN NOT PULL THE PLUG ON THE BATTERY
+                          //UNTIL THIS AMOUNT OF TIME IS UP, OTHERWISE THE CSV FILE WILL NOT PROPERLY CLOSE AND THAT RUNS DATA WILL BE LOST
 bool firstTime = true;
 
 // Keep trying to initialize the SD card until it works
@@ -23,15 +24,12 @@ void initializeCard() {
         status = card.getStatus();
         switch (status) {
             case SDCard::NOT_CONNECTED:
-                //Serial.println("SPI communications not initialized.");
                 card.initialize();
                 break;
             case SDCard::UNTESTED:
-                //Serial.println("Internal self-test has not passed. Retrying...");
                 card.initialize();
                 break;
             case SDCard::FILE_CLOSED:
-                //Serial.println("File closed. Reopening...");
                 card.initialize();
                 break;
         }
@@ -39,52 +37,17 @@ void initializeCard() {
 }
 
 void setup() {
-  // put your setup code here, to run once:
+  // put your setup code here, to run once: this is in case of 'print' statements
   //Serial.begin(9600);
   // (!Serial){
     //Nothing
   //}
-  //Serial.println("Testing SD Card...");
   initializeCard();
 
   card.writeHeaders();
 
-  //Serial.println("Connecting to sensor...");
   testIMU.initialize();
 }
-/* THIS IS FOR STATIC TEST
-void loop() {
-  // put your main code here, to run repeatedly:
-  static unsigned int backoff = 1000;
-
-  IMU::vector3 testAccel;
-  IMU::vector3 testGyro;
-  bool justChecking;
-
-  justChecking = testIMU.getValues(&testAccel, &testGyro);
-
-  if (justChecking){
-    Serial.print("\n\nAccel X: ");
-    Serial.print(testAccel.x);
-    Serial.print("\nAccel Y: ");
-    Serial.print(testAccel.y);
-    Serial.print("\nAccel Z: ");
-    Serial.print(testAccel.z);
-
-    Serial.print("\n\nGyro X: ");
-    Serial.print(testGyro.x);
-    Serial.print("\nGyro Y: ");
-    Serial.print(testGyro.y);
-    Serial.print("\nGyro Z: ");
-    Serial.print(testGyro.z);
-
-  } else {
-    Serial.println("Unable to get values...trying again");
-    delay(backoff);
-    backoff += backoff; //Doubling every time can't get value
-  }
-} THIS IS FOR STATIC TEST
-*/
 
 //In this Dynamic Test we want to record data to the SD card. We will drop the IMU, save the data to an SD card, 
 //and we will look at the data afterwards and determine how close the IMU got to feeling 0 acceleration
@@ -97,17 +60,14 @@ void loop(){
   delayMicroseconds((shortDelay * 1000) - (micros() % (shortDelay * 1000))); 
 
   //This is to make the time a lot easier for us to handle
-  fakeCoords.timestamp.milliseconds += (unsigned int)shortDelay;
+  fakeCoords.timestamp.milliseconds += shortDelay;
   if (int(fakeCoords.timestamp.milliseconds) >= 1000){
-    //Serial.println("Another Second Passed...");
     fakeCoords.timestamp.seconds += (unsigned int)1;
     fakeCoords.timestamp.milliseconds -= (unsigned int)1000;
   }
 
   if (fakeCoords.timestamp.seconds >= (unsigned int)maxTime){
     if (firstTime){
-      //Serial.println("File is closed...");
-      //Serial.flush();
       card.closeFile();
       firstTime = false;
     }

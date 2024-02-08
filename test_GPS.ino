@@ -41,7 +41,7 @@ void loop() {
     delay(1000);
 
   } else {
-    Serial.print("Unable to read values for some reason...");
+    Serial.println("Unable to read values for some reason...");
     delay(1000);
   }
 }
