@@ -16,7 +16,13 @@ void setup() {
   digitalWrite(6, HIGH);
 
   // wait a full day
-  delay(24 * 60 * 60 * 1000);
+  while (millis() < 24 * 60 * 60 * 1000) {
+    // blink the LED *slowly*
+    delay(1000);
+    digitalWrite(6, LOW);
+    delay(29000);
+    digitalWrite(6, HIGH);
+  }
 
   while (hum.getStatus() != HumiditySensor::ACTIVE) {
     hum.initialize();
