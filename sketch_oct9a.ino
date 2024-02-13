@@ -247,7 +247,7 @@ void setup() {
 
       if (command == "wake") {
         break;
-      } else if (command == "status") {
+      } else if (command == "transmit_data") {
 #if CAPSULE == 2
         readAtmospheric();
 #endif
