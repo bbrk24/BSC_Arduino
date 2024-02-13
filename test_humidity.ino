@@ -33,6 +33,9 @@ void setup() {
 
   // get multiple readings
   for (int i = 0; i < 50; ++i) {
+    // wait until 5ms has passed
+    delayMicroseconds(5000 - (micros() % 5000));
+
     // get the values until they succeed
     while (!hum.getValues(&humidity, &temperature)) {}
 
