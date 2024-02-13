@@ -31,11 +31,13 @@ void setup() {
 
   float humidity, temperature;
 
-  // get the values until they succeed
-  while (!hum.getValues(&humidity, &temperature)) {
-  }
+  // get multiple readings
+  for (int i = 0; i < 50; ++i) {
+    // get the values until they succeed
+    while (!hum.getValues(&humidity, &temperature)) {}
 
-  card.writeToCSV(fakeCoords, accel, 0, 0, humidity, temperature, gyro);
+    card.writeToCSV(fakeCoords, accel, 0, 0, humidity, temperature, gyro);
+  }
 
   card.closeFile();
   digitalWrite(6, LOW);
