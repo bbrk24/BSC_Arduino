@@ -49,11 +49,15 @@ public:
   // WARNING: This may hang if connections cannot be established! Use it with care
   void initialize() {
 
+    //Serial.print("Entering initialize()...");
+
 #define ENABLE_PHASE(gnss, enable) \
   if (!m_gnss.enableGNSS(enable, gnss)) { \
     break; \
   } \
-  ++m_phase;
+  m_phase++; \
+
+    //Serial.print("Made it past ENABLE_PHASE define...");
 
     switch (m_phase) {
     case 0:

@@ -25,6 +25,8 @@ const unsigned long RADIO_BAUD = 230400;
 // If this is more than ~200, the radio will be rate-limited by the sensors.
 const unsigned long RADIO_FREQ = 144;
 
+const byte SYNC_WORD[] = { 0xF2, 0x67, 0x0D, 0x98 };
+
 Altimeter alt;
 volatile float last_alt;
 
@@ -199,9 +201,7 @@ void sendDataToRadio() {
 #endif
   );
 
-  // In theory, this should send the data to the radio.
-  // In practice, this is completely untested. If nothing is connected to the UART pins, however,
-  // this doesn't do anything, so it's harmless to leave in for now.
+  Serial.write(SYNC_WORD, sizeof SYNC_WORD);
   Serial1.write(
     (char*)&f,
     FRAME_SIZE()
