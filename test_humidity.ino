@@ -1,48 +1,47 @@
 #if false
 
+#define CAPSULE 2
+
 #include "humidity.h"
+#include "SD_Card.h"
 
 // Since there's only the one sensor for this test, there's no reason to mess around with sercoms.
 // Just assign it to the default I2C port.
 HumiditySensor hum(&Wire);
 
+SDCard card;
+
 void setup() {
-  Serial.begin(9600);
-  while (!Serial) { /* Wait for Serial monitor to connect */ }
-  Serial.println("Connecting to sensor...");
-  hum.initialize();
+  pinMode(6, PinMode::OUTPUT);
+  digitalWrite(6, HIGH);
+
+  // wait a full day
+  delay(24 * 60 * 60 * 1000);
+
+  while (hum.getStatus() != HumiditySensor::ACTIVE) {
+    hum.initialize();
+  }
+  while (card.getStatus() != SDCard::ACTIVE) {
+    card.initialize();
+  }
+
+  GPS::Coordinates fakeCoords{0};
+  IMU::vector3 accel{0};
+  IMU::vector3 gyro{0};
+
+  float humidity, temperature;
+
+  // get the values until they succeed
+  while (!hum.getValues(&humidity, &temperature)) {
+  }
+
+  card.writeToCSV(fakeCoords, accel, 0, 0, humidity, temperature, gyro);
+
+  card.closeFile();
+  digitalWrite(6, LOW);
 }
 
 void loop() {
-  // Exponential backoff: each time it waits longer than the last.
-  // That way, if a wire is loose or missing, it doesn't flood the console with messages.
-  static unsigned int backoff = 100;
-
-  if (hum.getStatus() != HumiditySensor::ACTIVE) {
-    Serial.print("Not connected. Trying again in ");
-    Serial.print(backoff);
-    Serial.println("ms...");
-    delay(backoff);
-    backoff *= 2;
-    hum.initialize();
-  } else {
-    float humid, temp;
-    if (hum.getValues(&humid, &temp)) {
-      Serial.print("Humidity: ");
-      Serial.print(humid);
-      Serial.print("%RH, temperature: ");
-      Serial.print(temp);
-      Serial.println('C');
-      // Optional delay to slow down the console
-      delay(102);
-    } else {
-      Serial.print("No values available to be read. Trying again in ");
-      Serial.print(backoff);
-      Serial.println("ms...");
-      delay(backoff);
-      backoff *= 2;
-    }
-  }
 }
 
 #endif
