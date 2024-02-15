@@ -13,8 +13,16 @@ capsule_two_header_names = ["VOC Reading", "Humidity", "Temperature"]
 csv_file_dataframe = pd.read_csv("CAPS_INF.CSV", header = 0)
 
 # checks to see if capsule two columns are in the CSV file
-if set(capsule_two_header_names).issubset(csv_file_dataframe.iloc[0]):
-    csv_file_dataframe = pd.read_csv("CAPS_INV.CSV", header = 0)
+if set(capsule_two_header_names).issubset(csv_file_dataframe.columns):
+    # grabs humidity
+    humidity = csv_file_dataframe["Humidity"]
+
+    # grabs temperature
+    temperature = csv_file_dataframe["Temperature"]
+
+    # grabs VOC data
+    voc = csv_file_dataframe["VOC Reading"]
+
 else:
     print("Capsule two columns not found, handling alignment...")
 
