@@ -43,7 +43,7 @@ if set(capsule_two_header_names).issubset(csv_file_dataframe.columns):
     plt.plot(row_index, temperature)
     plt.title(f"Plot of Row Index vs {temperature_column_name}")
     plt.xlabel("Row Index")
-    plt.ylabel("Humidity (%)")
+    plt.ylabel("Temperature (deg C)")
     plt.grid(True)
     plt.show()
 
@@ -51,7 +51,7 @@ if set(capsule_two_header_names).issubset(csv_file_dataframe.columns):
     plt.plot(row_index, voc)
     plt.title(f"Plot of Row Index vs {voc_column_name}")
     plt.xlabel("Row Index")
-    plt.ylabel("Humidity (%)")
+    plt.ylabel("VOC Reading (V)")
     plt.grid(True)
     plt.show()
 
