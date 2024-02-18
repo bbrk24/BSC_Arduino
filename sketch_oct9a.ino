@@ -17,6 +17,9 @@
 #include "frame.h"
 #include "SD_Card.h"
 
+// Baud rate for radio UART
+const unsigned long RADIO_BAUD = 230400;
+
 // How many times per second the data will be sent over radio.
 // If this is more than ~18, some packets will have outdated GPS info.
 // If this is more than ~200, the radio will be rate-limited by the sensors.
@@ -122,8 +125,91 @@ void updateSDCardLEDs() {
   digitalWrite(5, good);
 }
 
+// Try to initialize all sensors. Has no effect once everything is initialized.
+void initializeAll() {
+  alt.initialize();
+  imu.initialize();
+#if CAPSULE == 2
+  hum.initialize();
+#endif
+  updateSensorLEDs();
+
+  card.initialize();
+  updateSDCardLEDs();
+
+  gps.initialize();
+  updateGPSLEDs();
+}
+
+// Convenience functions for reading sensor data
+#if CAPSULE == 2
+void readAtmospheric() {
+  last_voc = analogRead(6);
+
+  if (hum.getStatus() != HumiditySensor::ACTIVE) {
+    hum.initialize();
+    updateSensorLEDs();
+  }
+
+  hum.getValues(&last_humid, &last_temp);
+}
+#endif
+
+void readGPS() {
+  if (gps.getStatus() != GPS::ACTIVE) {
+    gps.initialize();
+    updateGPSLEDs();
+  }
+
+  gps.getLocation(&last_coords);
+}
+
+void readAltIMU() {
+  if (imu.getStatus() != IMU::ACTIVE) {
+    imu.initialize();
+    updateSensorLEDs();
+  }
+
+  // This has to be done like this because imu.getValues cannot take a pointer to a volatile vector3
+  IMU::vector3 accel, gyro;
+  if (imu.getValues(&accel, &gyro)) {
+    last_accel = accel;
+    last_gyro = gyro;
+  }
+
+  if (alt.getStatus() != Altimeter::ACTIVE) {
+    alt.initialize();
+    updateSensorLEDs();
+  }
+
+  if (alt.getStatus() == Altimeter::ACTIVE) {
+    last_alt = alt.getAltitude();
+  }
+}
+
+void sendDataToRadio() {
+  Frame f = createFrame(
+    last_coords,
+    last_accel,
+    last_gyro,
+    last_alt
+#if CAPSULE == 2
+    ,
+    last_voc,
+    last_humid,
+    last_temp
+#endif
+  );
+
+  Serial.write(SYNC_WORD, sizeof SYNC_WORD);
+  Serial1.write(
+    (char*)&f,
+    FRAME_SIZE()
+  );
+}
+
 void setup() {
-  Serial1.begin(9600);
+  Serial1.begin(RADIO_BAUD);
 
 #if CAPSULE == 2
   // Pin A6: analog input from VOC sensor
@@ -150,19 +236,31 @@ void setup() {
   digitalWrite(6, LOW);
   digitalWrite(7, LOW);
 
-  // Initialize sensors
-  alt.initialize();
-  imu.initialize();
+  // Wait for a command from the radio. Sometimes the sensors need multiple tries, and calling
+  // initialize too many times does nothing, so put the initialize call in the loop.
+  do {
+    initializeAll();
+
+    if (Serial1.available()) {
+      //The string returned from readStringUntil does not include the terminator
+      String command = Serial1.readStringUntil('\n');
+
+      if (command == "wake") {
+        break;
+      } else if (command == "transmit_data") {
 #if CAPSULE == 2
-  hum.initialize();
+        readAtmospheric();
 #endif
-  updateSensorLEDs();
-
-  card.initialize();
-  updateSDCardLEDs();
-
-  gps.initialize();
-  updateGPSLEDs();
+        readGPS();
+        readAltIMU();
+        sendDataToRadio();
+      } else {
+        // unrecognized command -- send back all zeros
+        char data[FRAME_SIZE()] = {0};
+        Serial1.write(data, FRAME_SIZE());
+      }
+    }
+  } while (true);
 
   Scheduler.startLoop(gps_loop);
   Scheduler.startLoop(radio_loop);
@@ -170,40 +268,13 @@ void setup() {
 
 void loop() {
 #if CAPSULE == 2
-  last_voc = analogRead(6);
-
-  if (hum.getStatus() != HumiditySensor::ACTIVE) {
-    hum.initialize();
-    updateSensorLEDs();
-  }
-
-  hum.getValues(&last_humid, &last_temp);
+  readAtmospheric();
 
   // Requesting data from the humidity sensor can be relatively slow
   yield();
 #endif
 
-  if (imu.getStatus() != IMU::ACTIVE) {
-    imu.initialize();
-    updateSensorLEDs();
-  }
-
-  // This has to be done like this because imu.getValues cannot take a pointer to a volatile vector3
-  IMU::vector3 accel, gyro;
-  if (imu.getValues(&accel, &gyro)) {
-    last_accel = accel;
-    last_gyro = gyro;
-  }
-
-  if (alt.getStatus() != Altimeter::ACTIVE) {
-    alt.initialize();
-    updateSensorLEDs();
-  }
-
-  if (alt.getStatus() == Altimeter::ACTIVE) {
-    last_alt = alt.getAltitude();
-  }
-
+  readAltIMU();
   yield();
 
   // Commenting out SD code for now until it can be tested
@@ -229,12 +300,7 @@ void loop() {
 }
 
 void gps_loop() {
-  if (gps.getStatus() != GPS::ACTIVE) {
-    gps.initialize();
-    updateGPSLEDs();
-  }
-
-  gps.getLocation(&last_coords);
+  readGPS();
 
   const unsigned long GPS_FREQ = 18;
   delay(1000 / GPS_FREQ);
@@ -242,25 +308,7 @@ void gps_loop() {
 
 void radio_loop() {
   delay(1000 / RADIO_FREQ);
-
-  Frame f = createFrame(
-    last_coords,
-    last_accel,
-    last_gyro,
-    last_alt
-#if CAPSULE == 2
-    ,
-    last_voc,
-    last_humid,
-    last_temp
-#endif
-  );
-
-  Serial1.write(SYNC_WORD, sizeof SYNC_WORD);
-  Serial1.write(
-    (char*)&f,
-    FRAME_SIZE()
-  );
+  sendDataToRadio();
 }
 
 #endif
