@@ -12,10 +12,12 @@ GPS::Coordinates fakeCoords{0};
 
 IMU::vector3 fakeGyro{0};
 IMU::vector3 testAccel;
-static unsigned int shortDelay = 5; //THIS IS THE NUMBER OF MILLISECONDS THAT YOU WANT THE IMU TO RECORD TO CSV (ie 5 milliseconds is 200Hz)
+static unsigned int frequency = 200; //THIS IS FREQUENCY OF MEASUREMENTS TAKEN BY IMU. MAKE SURE THAT 'shortDelay' WOULD STILL BE A WHOLE NUMBER
+static unsigned int shortDelay = int(1000/frequency); //THIS IS THE NUMBER OF MILLISECONDS THAT YOU WANT THE IMU TO RECORD TO CSV (ie 5 milliseconds is 200Hz)
 static int maxTime = 10; //THIS IS THE AMOUNT OF TIME YOU WANT THE IMU TO RECORD. YOU CAN NOT PULL THE PLUG ON THE BATTERY
                           //UNTIL THIS AMOUNT OF TIME IS UP, OTHERWISE THE CSV FILE WILL NOT PROPERLY CLOSE AND THAT RUNS DATA WILL BE LOST
 bool firstTime = true;
+unsigned long time;
 
 // Keep trying to initialize the SD card until it works
 void initializeCard() {
@@ -44,9 +46,9 @@ void setup() {
   //}
   initializeCard();
 
-  card.writeHeaders();
-
   testIMU.initialize();
+
+  digitalWrite(6, HIGH);
 }
 
 //In this Dynamic Test we want to record data to the SD card. We will drop the IMU, save the data to an SD card, 
@@ -58,6 +60,7 @@ void loop(){
 
   //wait until 2 milliseconds have passed, taking into account runtime of code
   delayMicroseconds((shortDelay * 1000) - (micros() % (shortDelay * 1000))); 
+  //delay(shortDelay);
 
   //This is to make the time a lot easier for us to handle
   fakeCoords.timestamp.milliseconds += shortDelay;
@@ -70,6 +73,7 @@ void loop(){
     if (firstTime){
       card.closeFile();
       firstTime = false;
+      digitalWrite(6, LOW);
     }
     
   } 
