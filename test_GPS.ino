@@ -2,7 +2,7 @@
 
 #include "gps.h"
 
-GPS testGPS(&Wire);
+GPS testGPS(Serial1);
 
 void setup() {
   Serial.begin(9600);
@@ -27,7 +27,7 @@ void loop() {
     Serial.print(testCoordinates.longitude);
     Serial.print("\nAltitude: ");
     Serial.print(testCoordinates.altitudeMSL);
-    Serial.print("ft");
+    Serial.println("ft");
 
     Serial.print("Hour: ");
     Serial.print(testCoordinates.timestamp.hours);
@@ -36,7 +36,7 @@ void loop() {
     Serial.print("\nSecond: ");
     Serial.print(testCoordinates.timestamp.seconds);
     Serial.print("\nMillisecond: ");
-    Serial.print(testCoordinates.timestamp.milliseconds);
+    Serial.println(testCoordinates.timestamp.milliseconds);
 
     delay(1000);
 
