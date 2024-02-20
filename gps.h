@@ -8,7 +8,9 @@ private:
   // Maximum valid NMEA string is 82 chars, add 1 for null terminator
   char m_buffer[83];
   MicroNMEA m_nmea;
+  // Has the UART bus been opened?
   bool m_begun;
+  // Has data been successfully read?
   bool m_valid;
 public:
   GPS(Uart& bus) :
@@ -131,6 +133,8 @@ public:
           const float FEET_PER_MILLIMETER = 0.0032808399F;
           coords->altitudeMSL = FEET_PER_MILLIMETER * altitudeMillimeters;
         }
+
+        coords->numSatellites = m_nmea.getNumSatellites();
 
         // MicroNMEA is only precise to the hundredth of a second
         coords->timestamp.milliseconds = m_nmea.getHundredths() * 10;
