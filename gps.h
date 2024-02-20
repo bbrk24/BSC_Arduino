@@ -146,4 +146,8 @@ public:
     // No data available for read
     return false;
   }
+
+  static uint32_t getTotalMS(Timestamp t) noexcept {
+    return ((t.hours * 60 + t.minutes) * 60 + t.seconds) * 1000 + t.milliseconds;
+  }
 };
