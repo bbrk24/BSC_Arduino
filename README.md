@@ -2,7 +2,7 @@
 
 This repo contains the Arduino code for the BSC 2023-24 team.
 
-In order to compile this, you will need to install the Arduino libraries `Scheduler`, `Adafruit BMP3XX Library`, `Adafruit LSM9DS1 Library`, `Adafruit SHT4x Library`, and `SparkFun u-blox GNSS v3`. The circuit schematic is included in the .ms14 files. The relay in PayloadBay.ms14 is a placeholder relay and not necessarily representative of the actual relay that will be used.
+In order to compile this, you will need to install the Arduino libraries `Scheduler`, `Adafruit BMP3XX Library`, `Adafruit LSM9DS1 Library`, `Adafruit SHT4x Library`, and `MicroNMEA`. The circuit schematic is included in the .ms14 files. The relay in PayloadBay.ms14 is a placeholder relay and not necessarily representative of the actual relay that will be used.
 
 ## On the `.ino` files
 

@@ -1,4 +1,4 @@
-#if true
+#if false
 
 #include "wiring_private.h"
 #include "Scheduler.h"
@@ -35,7 +35,7 @@ On the Arduino MKR series, all pins for a I2C/UART/SPI instance must be on the s
 Additionally, for I2C, only some pins are suitable for clock and only some pins are suitable for
 data. There are six sercoms:
 
-sercom0: 2, 3, 11 (SDA), 12 (SCL), A3 (SDA), A4 (SCL), A5, A6
+sercom0: 2, 3, 11 (SDA), 12 (SCL), A3, A4, A5, A6
 sercom1: 8 (SDA), 9 (SCL), 10
 sercom2: 2, 3, 11 (SDA), 12 (SCL), <SD>
 sercom3: 0 (SDA), 1 (SCL), 6, 7, 8 (SDA), 9 (SCL), 10, <USB>
@@ -64,9 +64,9 @@ volatile IMU::vector3 last_gyro;
 
 #if CAPSULE == 2
 static TwoWire humidityI2C(
-  &sercom0,
-  /*sda:*/A3,
-  /*scl:*/A4
+  &sercom3,
+  /*sda:*/0,
+  /*scl:*/1
 );
 HumiditySensor hum(&humidityI2C);
 volatile float last_humid;
@@ -75,12 +75,16 @@ volatile float last_temp;
 volatile int last_voc;
 #endif
 
-static TwoWire gpsI2C(
-  &sercom3,
-  /*sda:*/0,
-  /*scl:*/1
+// Even though this is in simplex operation and doesn't even have a physical wire to write to,
+// the initializer still needs a TX pin.
+static Uart gpsUart(
+  &sercom0,
+  /*rx:*/3,
+  /*tx:*/2,
+  SERCOM_RX_PAD_3,
+  UART_TX_PAD_2
 );
-GPS gps(&gpsI2C);
+GPS gps(gpsUart);
 volatile GPS::Coordinates last_coords;
 
 SDCard card;
@@ -91,12 +95,14 @@ void SERCOM1_Handler(void) {
 }
 
 void SERCOM0_Handler(void) {
-  humidityI2C.onService();
+  gpsUart.IrqHandler();
 }
 
+#if CAPSULE == 2
 void SERCOM3_Handler(void) {
-  gpsI2C.onService();
+  humidityI2C.onService();
 }
+#endif
 } // extern "C"
 
 void updateSensorLEDs() {
@@ -222,14 +228,14 @@ void setup() {
   // Pin D7: sensor LEDs
   pinMode(7, PinMode::OUTPUT);
 
+#if CAPSULE == 2
   pinPeripheral(0, PIO_SERCOM);
   pinPeripheral(1, PIO_SERCOM);
+#endif
+  pinPeripheral(2, PIO_SERCOM);
+  pinPeripheral(3, PIO_SERCOM);
   pinPeripheral(8, PIO_SERCOM);
   pinPeripheral(9, PIO_SERCOM);
-  pinPeripheral(A1, PIO_SERCOM);
-  pinPeripheral(A2, PIO_SERCOM);
-  pinPeripheral(A3, PIO_SERCOM);
-  pinPeripheral(A4, PIO_SERCOM);
 
   // Turn on the error LEDs until initialization finishes
   digitalWrite(5, LOW);
