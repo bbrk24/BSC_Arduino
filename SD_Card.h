@@ -6,6 +6,16 @@
 
 #pragma once
 
+#ifndef CAPSULE
+#pragma GCC error "CAPSULE is not defined. Please define it to either 1 or 2."
+#elif CAPSULE == 1
+#pragma message "Compiling for capsule 1 (camera)..."
+#elif CAPSULE == 2
+#pragma message "Compiling for capsule 2 (atmospheric sensing)..."
+#else
+#pragma GCC error "Unexpected value for CAPSULE (expected 1 or 2)"
+#endif
+
 class SDCard {
   private:
     File m_sdCardFile;

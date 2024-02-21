@@ -4,7 +4,7 @@
 #include "Scheduler.h"
 
 // 1 for camera, 2 for atmospheric sensors
-#define CAPSULE 2
+#define CAPSULE 1
 
 #include "altimeter.h"
 #include "imu.h"
@@ -14,7 +14,6 @@
 #include "humidity.h"
 #endif
 
-#include "frame.h"
 #include "SD_Card.h"
 
 // Baud rate for radio UART
@@ -25,7 +24,7 @@ const unsigned long RADIO_BAUD = 230400;
 // If this is more than ~200, the radio will be rate-limited by the sensors.
 const unsigned long RADIO_FREQ = 144;
 
-const byte SYNC_WORD[] = { 0xF2, 0x67, 0x0D, 0x98 };
+volatile bool ledsOn = true;
 
 Altimeter alt;
 volatile float last_alt;
@@ -90,6 +89,15 @@ volatile GPS::Coordinates last_coords;
 
 SDCard card;
 
+int8_t radiansToCappedDegrees(float rad) {
+  float deg = degrees(rad);
+  if (fabsf(deg) > 127.0F) {
+    return -128;
+  } else {
+    return (int8_t)deg;
+  }
+}
+
 extern "C" {
 void SERCOM1_Handler(void) {
   imuI2C.onService();
@@ -107,6 +115,8 @@ void SERCOM3_Handler(void) {
 } // extern "C"
 
 void updateSensorLEDs() {
+  if (!ledsOn) { return; }
+
   IMU::Status imuStatus = imu.getStatus();
   Altimeter::Status altimeterStatus = alt.getStatus();
 #if CAPSULE == 2
@@ -123,11 +133,15 @@ void updateSensorLEDs() {
 }
 
 void updateGPSLEDs() {
+  if (!ledsOn) { return; }
+
   bool good = gps.getStatus() == GPS::ACTIVE;
   digitalWrite(6, good);
 }
 
 void updateSDCardLEDs() {
+  if (!ledsOn) { return; }
+
   bool good = card.getStatus() == SDCard::ACTIVE;
   digitalWrite(5, good);
 }
@@ -198,25 +212,49 @@ void readAltIMU() {
   }
 }
 
+char sign(int n) {
+  return n < 0 ? '-' : '+';
+}
+
 void sendDataToRadio() {
-  Frame f = createFrame(
-    last_coords,
-    last_accel,
-    last_gyro,
-    last_alt
+  char buf[79];
+  
+  int pitch = radiansToCappedDegrees(last_gyro.x);
+  int roll = radiansToCappedDegrees(last_gyro.y);
+  int yaw = radiansToCappedDegrees(last_gyro.z);
+
+  int accelXcm = last_accel.x * 100;
+  int accelYcm = last_accel.y * 100;
+  int accelZcm = last_accel.z * 100;
+
+  snprintf(
+    buf,
+    sizeof buf,
+    "%c%08X,%c%08X,%07X,%X,%c%02X,%c%02X,%c%02X,%c%04X,%c%04X,%c%04X,%c%04X"
+#if CAPSULE = 2
+    ",%03X,%c%03X,%02X"
+#endif
+    "\n",
+    sign(last_coords.latitude), abs(last_coords.latitude),
+    sign(last_coords.longitude), abs(last_coords.longitude),
+    GPS::getTotalMS(last_coords.timestamp),
+    (unsigned int)last_coords.numSatellites,
+    sign(pitch), abs(pitch),
+    sign(roll), abs(roll),
+    sign(yaw), abs(yaw),
+    sign(accelXcm), abs(accelXcm),
+    sign(accelYcm), abs(accelYcm),
+    sign(accelZcm), abs(accelZcm),
+    sign(last_alt), (unsigned int)abs(last_alt)
 #if CAPSULE == 2
     ,
     last_voc,
-    last_humid,
-    last_temp
+    sign(last_temp), (unsigned int)abs(last_temp),
+    (unsigned int)last_humid
 #endif
   );
-
-  Serial.write(SYNC_WORD, sizeof SYNC_WORD);
-  Serial1.write(
-    (char*)&f,
-    FRAME_SIZE()
-  );
+  
+  Serial1.write(buf);
 }
 
 void setup() {
@@ -256,7 +294,12 @@ void setup() {
       //The string returned from readStringUntil does not include the terminator
       String command = Serial1.readStringUntil('\n');
 
-      if (command == "wake") {
+      if (command == "start") {
+        // disable LEDs
+        pinMode(5, PinMode::INPUT);
+        pinMode(6, PinMode::INPUT);
+        pinMode(7, PinMode::INPUT);
+
         break;
       } else if (command == "transmit_data") {
 #if CAPSULE == 2
@@ -267,8 +310,11 @@ void setup() {
         sendDataToRadio();
       } else {
         // unrecognized command -- send back all zeros
-        char data[FRAME_SIZE()] = {0};
-        Serial1.write(data, FRAME_SIZE());
+#if CAPSULE == 1
+        Serial1.write("+00000000,+00000000,0000000,0,+00,+00,+00,+0000,+0000,+0000,+0000\n")
+#else
+        Serial1.write("+00000000,+00000000,0000000,0,+00,+00,+00,+0000,+0000,+0000,+0000,000,+000,+00\n");
+#endif
       }
     }
   } while (true);
