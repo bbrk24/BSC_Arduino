@@ -29,6 +29,7 @@ const byte SYNC_WORD[] = { 0xF2, 0x67, 0x0D, 0x98 };
 
 Altimeter alt;
 volatile float last_alt;
+float max_alt = -INFINITY;
 
 /*
 On the Arduino MKR series, all pins for a I2C/UART/SPI instance must be on the same "sercom" object.
@@ -189,7 +190,11 @@ void readAltIMU() {
   }
 
   if (alt.getStatus() == Altimeter::ACTIVE) {
-    last_alt = alt.getAltitude();
+    float altitude = alt.getAltitude();
+    last_alt = altitude;
+    if (max_alt < altitude) {
+      max_alt = altitude;
+    }
   }
 }
 
@@ -283,26 +288,27 @@ void loop() {
   readAltIMU();
   yield();
 
-  // Commenting out SD code for now until it can be tested
-  /*
-  if (card.getStatus() != SDCard::ACTIVE) {
-    card.initialize();
-    updateSDCardLEDs();
-  }
-  card.writeToCSV(
-    last_coords,
-    last_accel,
-    last_alt,
+  if (card.getStatus() == SDCard::ACTIVE && max_alt > 2000 && last_alt < 1000) {
+    card.closeFile();
+  } else {
+    if (card.getStatus() != SDCard::ACTIVE) {
+      card.initialize();
+      updateSDCardLEDs();
+    }
+    card.writeToCSV(
+      last_coords,
+      last_accel,
+      last_alt,
 #if CAPSULE == 2
-    last_voc,
-    last_humid,
-    last_temp,
+      last_voc,
+      last_humid,
+      last_temp,
 #endif
-    last_gyro
-  );
+      last_gyro
+    );
 
-  yield();
-  */
+    yield();
+  }
 }
 
 void gps_loop() {
