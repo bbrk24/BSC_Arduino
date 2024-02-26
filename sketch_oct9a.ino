@@ -241,7 +241,7 @@ void sendDataToRadio() {
     sign(last_coords.latitude), abs(last_coords.latitude),
     sign(last_coords.longitude), abs(last_coords.longitude),
     GPS::getTotalMS(last_coords.timestamp),
-    (unsigned int)last_coords.numSatellites,
+    min(15U, (unsigned int)last_coords.numSatellites),
     sign(pitch), abs(pitch),
     sign(roll), abs(roll),
     sign(yaw), abs(yaw),
