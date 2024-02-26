@@ -4,7 +4,7 @@
 #include "Scheduler.h"
 
 // 1 for camera, 2 for atmospheric sensors
-#define CAPSULE 1
+#define CAPSULE 2
 
 #include "altimeter.h"
 #include "imu.h"
@@ -25,10 +25,6 @@ const unsigned long RADIO_BAUD = 230400;
 const unsigned long RADIO_FREQ = 144;
 
 volatile bool ledsOn = true;
-
-Altimeter alt;
-volatile float last_alt;
-float max_alt = -INFINITY;
 
 /*
 On the Arduino MKR series, all pins for a I2C/UART/SPI instance must be on the same "sercom" object.
@@ -53,20 +49,25 @@ There is also some additional code that must be added, as per
 https://docs.arduino.cc/tutorials/communication/SamdSercom#create-a-new-wire-instance
 */
 
-static TwoWire imuI2C(
-  &sercom1,
-  /*sda:*/8,
-  /*scl:*/9
+static TwoWire altI2C(
+  &sercom3,
+  /*sda:*/0,
+  /*scl:*/1
 );
-IMU imu(&imuI2C);
+
+Altimeter alt;
+volatile float last_alt;
+float max_alt = -INFINITY;
+
+IMU imu(&Wire);
 volatile IMU::vector3 last_accel;
 volatile IMU::vector3 last_gyro;
 
 #if CAPSULE == 2
 static TwoWire humidityI2C(
-  &sercom3,
-  /*sda:*/0,
-  /*scl:*/1
+  &sercom1,
+  /*sda:*/8,
+  /*scl:*/9
 );
 HumiditySensor hum(&humidityI2C);
 volatile float last_humid;
@@ -84,6 +85,8 @@ static Uart gpsUart(
   SERCOM_RX_PAD_3,
   UART_TX_PAD_2
 );
+Uart& radioUart = Serial1;
+
 GPS gps(gpsUart);
 volatile GPS::Coordinates last_coords;
 
@@ -99,19 +102,19 @@ int8_t radiansToCappedDegrees(float rad) {
 }
 
 extern "C" {
-void SERCOM1_Handler(void) {
-  imuI2C.onService();
-}
-
 void SERCOM0_Handler(void) {
   gpsUart.IrqHandler();
 }
 
 #if CAPSULE == 2
-void SERCOM3_Handler(void) {
+void SERCOM1_Handler(void) {
   humidityI2C.onService();
 }
 #endif
+
+void SERCOM3_Handler(void) {
+  altI2C.onService();
+}
 } // extern "C"
 
 void updateSensorLEDs() {
@@ -148,7 +151,7 @@ void updateSDCardLEDs() {
 
 // Try to initialize all sensors. Has no effect once everything is initialized.
 void initializeAll() {
-  alt.initialize();
+  alt.initialize(&altI2C);
   imu.initialize();
 #if CAPSULE == 2
   hum.initialize();
@@ -199,7 +202,7 @@ void readAltIMU() {
   }
 
   if (alt.getStatus() != Altimeter::ACTIVE) {
-    alt.initialize();
+    alt.initialize(&altI2C);
     updateSensorLEDs();
   }
 
@@ -231,7 +234,7 @@ void sendDataToRadio() {
     buf,
     sizeof buf,
     "%c%08X,%c%08X,%07X,%X,%c%02X,%c%02X,%c%02X,%c%04X,%c%04X,%c%04X,%c%04X"
-#if CAPSULE = 2
+#if CAPSULE == 2
     ",%03X,%c%03X,%02X"
 #endif
     "\n",
@@ -254,11 +257,11 @@ void sendDataToRadio() {
 #endif
   );
   
-  Serial1.write(buf);
+  radioUart.write(buf);
 }
 
 void setup() {
-  Serial1.begin(RADIO_BAUD);
+  radioUart.begin(RADIO_BAUD);
 
 #if CAPSULE == 2
   // Pin A6: analog input from VOC sensor
@@ -290,9 +293,9 @@ void setup() {
   do {
     initializeAll();
 
-    if (Serial1.available()) {
+    if (radioUart.available()) {
       //The string returned from readStringUntil does not include the terminator
-      String command = Serial1.readStringUntil('\n');
+      String command = radioUart.readStringUntil('\n');
 
       if (command == "start") {
         // disable LEDs
@@ -311,9 +314,9 @@ void setup() {
       } else {
         // unrecognized command -- send back all zeros
 #if CAPSULE == 1
-        Serial1.write("+00000000,+00000000,0000000,0,+00,+00,+00,+0000,+0000,+0000,+0000\n")
+        radioUart.write("+00000000,+00000000,0000000,0,+00,+00,+00,+0000,+0000,+0000,+0000\n")
 #else
-        Serial1.write("+00000000,+00000000,0000000,0,+00,+00,+00,+0000,+0000,+0000,+0000,000,+000,+00\n");
+        radioUart.write("+00000000,+00000000,0000000,0,+00,+00,+00,+0000,+0000,+0000,+0000,000,+000,+00\n");
 #endif
       }
     }
