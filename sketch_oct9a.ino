@@ -337,8 +337,10 @@ void loop() {
   readAltIMU();
   yield();
 
-  if (card.getStatus() == SDCard::ACTIVE && max_alt > 2000 && last_alt < 1000) {
-    card.closeFile();
+  if (max_alt > 2000 && last_alt < 1000) {
+    if (card.getStatus() == SDCard::ACTIVE) {
+      card.closeFile();
+    }
   } else {
     if (card.getStatus() != SDCard::ACTIVE) {
       card.initialize();
