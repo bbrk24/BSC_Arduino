@@ -4,7 +4,7 @@
 #include "Scheduler.h"
 
 // 1 for camera, 2 for atmospheric sensors
-#define CAPSULE 2
+#define CAPSULE 1
 
 #include "altimeter.h"
 #include "imu.h"
@@ -274,14 +274,14 @@ void setup() {
   // Pin D7: sensor LEDs
   pinMode(7, PinMode::OUTPUT);
 
-#if CAPSULE == 2
   pinPeripheral(0, PIO_SERCOM);
   pinPeripheral(1, PIO_SERCOM);
-#endif
   pinPeripheral(2, PIO_SERCOM);
   pinPeripheral(3, PIO_SERCOM);
+#if CAPSULE == 2
   pinPeripheral(8, PIO_SERCOM);
   pinPeripheral(9, PIO_SERCOM);
+#endif
 
   // Turn on the error LEDs until initialization finishes
   digitalWrite(5, LOW);
@@ -314,7 +314,7 @@ void setup() {
       } else {
         // unrecognized command -- send back all zeros
 #if CAPSULE == 1
-        radioUart.write("+00000000,+00000000,0000000,0,+00,+00,+00,+0000,+0000,+0000,+0000\n")
+        radioUart.write("+00000000,+00000000,0000000,0,+00,+00,+00,+0000,+0000,+0000,+0000\n");
 #else
         radioUart.write("+00000000,+00000000,0000000,0,+00,+00,+00,+0000,+0000,+0000,+0000,000,+000,+00\n");
 #endif
