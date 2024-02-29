@@ -4,7 +4,7 @@
 #include "Scheduler.h"
 
 // 1 for camera, 2 for atmospheric sensors
-#define CAPSULE 1
+#define CAPSULE 2
 
 #include "altimeter.h"
 #include "imu.h"
@@ -147,6 +147,24 @@ void updateSDCardLEDs() {
 
   bool good = card.getStatus() == SDCard::ACTIVE;
   digitalWrite(5, good);
+}
+
+void saveDataToSD() {
+  if (card.getStatus() != SDCard::ACTIVE) {
+    card.initialize();
+    updateSDCardLEDs();
+  }
+  card.writeToCSV(
+    last_coords,
+    last_accel,
+    last_alt,
+#if CAPSULE == 2
+    last_voc,
+    last_humid,
+    last_temp,
+#endif
+    last_gyro
+  );
 }
 
 // Try to initialize all sensors. Has no effect once everything is initialized.
@@ -311,6 +329,7 @@ void setup() {
         readGPS();
         readAltIMU();
         sendDataToRadio();
+        saveDataToSD();
       } else {
         // unrecognized command -- send back all zeros
 #if CAPSULE == 1
@@ -324,6 +343,7 @@ void setup() {
 
   Scheduler.startLoop(gps_loop);
   Scheduler.startLoop(radio_loop);
+  Scheduler.startLoop(save_loop);
 }
 
 void loop() {
@@ -342,22 +362,7 @@ void loop() {
       card.closeFile();
     }
   } else {
-    if (card.getStatus() != SDCard::ACTIVE) {
-      card.initialize();
-      updateSDCardLEDs();
-    }
-    card.writeToCSV(
-      last_coords,
-      last_accel,
-      last_alt,
-#if CAPSULE == 2
-      last_voc,
-      last_humid,
-      last_temp,
-#endif
-      last_gyro
-    );
-
+    saveDataToSD();
     yield();
   }
 }
@@ -372,6 +377,14 @@ void gps_loop() {
 void radio_loop() {
   delay(1000 / RADIO_FREQ);
   sendDataToRadio();
+}
+
+void save_loop() {
+  delay(2000);
+  // If the file was intentionally closed, don't re-open it.
+  if (card.getStatus() != SDCard::FILE_CLOSED) {
+    card.closeAndReopen();
+  } 
 }
 
 #endif

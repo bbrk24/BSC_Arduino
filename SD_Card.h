@@ -239,4 +239,16 @@ class SDCard {
     void closeFile() {
       m_sdCardFile.close();
     }
+
+    /** Make sure data is saved to the SD card, then immediately re-open the file. */
+    void closeAndReopen() {
+      if (getStatus() != Status::ACTIVE) {
+        // The file was never opened in the first place. Make sure it's set up.
+        initialize();
+        return;
+      }
+
+      m_sdCardFile.close();
+      m_sdCardFile = SD.open(m_fileName, FILE_WRITE);
+    }
 };
