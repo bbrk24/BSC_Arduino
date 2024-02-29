@@ -3,7 +3,7 @@
 #include "Altimeter.h"
 
 const float PAYLOAD_THRESHOLD = 14.5; // the height of one floor in Baldwin Hall staircase (ft)
-const float COUNT_THRESHOLD 200; // I THINK this is how we rate limit the frequency?
+const float COUNT_THRESHOLD = 200; // I THINK this is how we rate limit the frequency?
 
 Altimeter m_altimeter;
 
@@ -27,8 +27,7 @@ void loop() {
 
     if (altitudeOutput > PAYLOAD_THRESHOLD && numAltimeterReadings > COUNT_THRESHOLD) {
       digitalWrite(8, LOW); //Sets up pin 8 to be the signal to eject capsules
+      numAltimeterReadings += 1;
     }
-
-    numAltimeterReadings += 1;
   }
 }
