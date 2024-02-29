@@ -3,18 +3,16 @@
 #include "Altimeter.h"
 
 const float PAYLOAD_THRESHOLD = 14.5; // the height of one floor in Baldwin Hall staircase (ft)
-const float COUNT_THRESHOLD = 200; // I THINK this is how we rate limit the frequency?
+const float COUNT_THRESHOLD = 200; // number of measurements to take
 
 Altimeter m_altimeter;
-
-int numAltimeterReadings = 0;
 
 void setup() {
   Serial.begin(9600);
   while (!Serial) { /* Wait for Serial monitor to connect */ }
   Serial.println("Connecting to sensor...");
   m_altimeter.initialize();
-  pinMode(8, OUTPUT);
+  pinMode(8, OUTPUT); // sets pin D8 to be in output mode
 }
 
 void loop() {
@@ -24,10 +22,14 @@ void loop() {
     m_altimeter.initialize();
   } else {
     float altitudeOutput = m_altimeter.getAltitude();
+    static int numAltimeterReadings = 0;
 
-    if (altitudeOutput > PAYLOAD_THRESHOLD && numAltimeterReadings > COUNT_THRESHOLD) {
-      digitalWrite(8, LOW); //Sets up pin 8 to be the signal to eject capsules
+    if (altitudeOutput > PAYLOAD_THRESHOLD) {
       numAltimeterReadings += 1;
+      
+      if (numAltimeterReadings > COUNT_THRESHOLD) {
+        digitalWrite(8, HIGH); // activates the relay pin
+      }
     }
   }
 }
