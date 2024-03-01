@@ -24,6 +24,8 @@ const unsigned long RADIO_BAUD = 230400;
 // If this is more than ~200, the radio will be rate-limited by the sensors.
 const unsigned long RADIO_FREQ = 144;
 
+const unsigned long GPS_FREQ = 18;
+
 volatile bool ledsOn = true;
 
 /*
@@ -317,6 +319,7 @@ void setup() {
 
       if (command == "start") {
         // disable LEDs
+        ledsOn = false;
         pinMode(5, PinMode::INPUT);
         pinMode(6, PinMode::INPUT);
         pinMode(7, PinMode::INPUT);
@@ -341,9 +344,8 @@ void setup() {
     }
   } while (true);
 
-  Scheduler.startLoop(gps_loop);
+  Scheduler.startLoop(gps_and_save_loop);
   Scheduler.startLoop(radio_loop);
-  Scheduler.startLoop(save_loop);
 }
 
 void loop() {
@@ -355,7 +357,11 @@ void loop() {
 #endif
 
   readAltIMU();
+
+  // Leaving this yield in in capsule 2 increases the amount of time spent context switching by up to 9x!
+#if CAPSULE == 1
   yield();
+#endif
 
   if (max_alt > 2000 && last_alt < 1000) {
     if (card.getStatus() == SDCard::ACTIVE) {
@@ -367,24 +373,21 @@ void loop() {
   }
 }
 
-void gps_loop() {
-  readGPS();
+void gps_and_save_loop() {
+  for (int i = 0; i < 2 * GPS_FREQ; ++i) {
+    readGPS();
+    delay(1000 / GPS_FREQ);
+  }
 
-  const unsigned long GPS_FREQ = 18;
-  delay(1000 / GPS_FREQ);
+  // If the file was intentionally closed, don't re-open it.
+  if (card.getStatus() != SDCard::FILE_CLOSED) {
+    card.closeAndReopen();
+  }
 }
 
 void radio_loop() {
   delay(1000 / RADIO_FREQ);
   sendDataToRadio();
-}
-
-void save_loop() {
-  delay(2000);
-  // If the file was intentionally closed, don't re-open it.
-  if (card.getStatus() != SDCard::FILE_CLOSED) {
-    card.closeAndReopen();
-  } 
 }
 
 #endif
