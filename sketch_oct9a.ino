@@ -4,7 +4,7 @@
 #include "Scheduler.h"
 
 // 1 for camera, 2 for atmospheric sensors
-#define CAPSULE 1
+#define CAPSULE 2
 
 #include "altimeter.h"
 #include "imu.h"
@@ -23,6 +23,8 @@ const unsigned long RADIO_BAUD = 230400;
 // If this is more than ~18, some packets will have outdated GPS info.
 // If this is more than ~200, the radio will be rate-limited by the sensors.
 const unsigned long RADIO_FREQ = 144;
+
+const unsigned long GPS_FREQ = 18;
 
 volatile bool ledsOn = true;
 
@@ -147,6 +149,24 @@ void updateSDCardLEDs() {
 
   bool good = card.getStatus() == SDCard::ACTIVE;
   digitalWrite(5, good);
+}
+
+void saveDataToSD() {
+  if (card.getStatus() != SDCard::ACTIVE) {
+    card.initialize();
+    updateSDCardLEDs();
+  }
+  card.writeToCSV(
+    last_coords,
+    last_accel,
+    last_alt,
+#if CAPSULE == 2
+    last_voc,
+    last_humid,
+    last_temp,
+#endif
+    last_gyro
+  );
 }
 
 // Try to initialize all sensors. Has no effect once everything is initialized.
@@ -299,6 +319,7 @@ void setup() {
 
       if (command == "start") {
         // disable LEDs
+        ledsOn = false;
         pinMode(5, PinMode::INPUT);
         pinMode(6, PinMode::INPUT);
         pinMode(7, PinMode::INPUT);
@@ -311,6 +332,7 @@ void setup() {
         readGPS();
         readAltIMU();
         sendDataToRadio();
+        saveDataToSD();
       } else {
         // unrecognized command -- send back all zeros
 #if CAPSULE == 1
@@ -322,7 +344,7 @@ void setup() {
     }
   } while (true);
 
-  Scheduler.startLoop(gps_loop);
+  Scheduler.startLoop(gps_and_save_loop);
   Scheduler.startLoop(radio_loop);
 }
 
@@ -335,38 +357,32 @@ void loop() {
 #endif
 
   readAltIMU();
+
+  // Leaving this yield in in capsule 2 increases the amount of time spent context switching by up to 9x!
+#if CAPSULE == 1
   yield();
+#endif
 
   if (max_alt > 2000 && last_alt < 1000) {
     if (card.getStatus() == SDCard::ACTIVE) {
       card.closeFile();
     }
   } else {
-    if (card.getStatus() != SDCard::ACTIVE) {
-      card.initialize();
-      updateSDCardLEDs();
-    }
-    card.writeToCSV(
-      last_coords,
-      last_accel,
-      last_alt,
-#if CAPSULE == 2
-      last_voc,
-      last_humid,
-      last_temp,
-#endif
-      last_gyro
-    );
-
+    saveDataToSD();
     yield();
   }
 }
 
-void gps_loop() {
-  readGPS();
+void gps_and_save_loop() {
+  for (int i = 0; i < 2 * GPS_FREQ; ++i) {
+    readGPS();
+    delay(1000 / GPS_FREQ);
+  }
 
-  const unsigned long GPS_FREQ = 18;
-  delay(1000 / GPS_FREQ);
+  // If the file was intentionally closed, don't re-open it.
+  if (card.getStatus() != SDCard::FILE_CLOSED) {
+    card.closeAndReopen();
+  }
 }
 
 void radio_loop() {

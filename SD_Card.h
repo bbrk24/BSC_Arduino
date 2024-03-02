@@ -167,48 +167,37 @@ class SDCard {
       const volatile IMU::vector3& gyro) {
         // checks if SD card is open and good to be written to 
         if (m_sdCardFile) {
-          String dataOutputString = "";
-
-          dataOutputString += String(coords.latitude);
-          dataOutputString += ",";
-          dataOutputString += String(coords.longitude);
-          dataOutputString += ",";
-          dataOutputString += String(coords.altitudeMSL);
-          dataOutputString += ",";
-          dataOutputString += String(coords.numSatellites);
-          dataOutputString += ",";
-          dataOutputString += String(coords.timestamp.hours) + ":" + String(coords.timestamp.minutes) + ":" + String(coords.timestamp.seconds) + ":" + String(coords.timestamp.milliseconds);
-          dataOutputString += ",";
-
-          dataOutputString += String(accel.x);
-          dataOutputString += ",";
-          dataOutputString += String(accel.y);
-          dataOutputString += ",";
-          dataOutputString += String(accel.z);
-          dataOutputString += ",";
-
-          dataOutputString += String(altitude);
-
-          dataOutputString += ",";
-
+          char dataOutputString[126];
+          // 126 *should* be long enough for any valid data.
+          // However, unlike the radio packet, this isn't a fixed length.
+          // So, in case there's invalid data or I miscounted, use snprintf, which cuts off the output
+          // instead of corrupting data if the string is too long.
+          snprintf(
+            dataOutputString,
+            sizeof dataOutputString,
+            "%d,%d,%.5g,%hu,%u:%u:%u:%u,%.2f,%.2f,%.2f,%.2f,"
 #if CAPSULE == 2
-          dataOutputString += String(analogReading);
-
-          dataOutputString += ",";
-
-          dataOutputString += String(humidity);
-
-          dataOutputString += ",";
-
-          dataOutputString += String(temperature);
-
-          dataOutputString += ",";
+            "%d,%.2f,%.1f,"
 #endif
-          dataOutputString += String(gyro.x);
-          dataOutputString += ",";
-          dataOutputString += String(gyro.y);
-          dataOutputString += ",";
-          dataOutputString += String(gyro.z);
+            "%.3f,%.3f,%.3f",
+            coords.latitude,
+            coords.longitude,
+            (double)coords.altitudeMSL,
+            (unsigned short)coords.numSatellites,
+            coords.timestamp.hours, coords.timestamp.minutes, coords.timestamp.seconds, coords.timestamp.milliseconds,
+            (double)accel.x,
+            (double)accel.y,
+            (double)accel.z,
+            (double)altitude,
+#if CAPSULE == 2
+            analogReading,
+            (double)humidity,
+            (double)temperature,
+#endif
+            (double)gyro.x,
+            (double)gyro.y,
+            (double)gyro.z
+          );
 
           m_sdCardFile.println(dataOutputString);
         }
@@ -238,5 +227,17 @@ class SDCard {
 
     void closeFile() {
       m_sdCardFile.close();
+    }
+
+    /** Make sure data is saved to the SD card, then immediately re-open the file. */
+    void closeAndReopen() {
+      if (getStatus() != Status::ACTIVE) {
+        // The file was never opened in the first place. Make sure it's set up.
+        initialize();
+        return;
+      }
+
+      m_sdCardFile.close();
+      m_sdCardFile = SD.open(m_fileName, FILE_WRITE);
     }
 };
