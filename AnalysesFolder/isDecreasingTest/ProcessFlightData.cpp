@@ -44,7 +44,7 @@ string grabNextField(string& csvLine) {
 int main() {
 	srand(time(NULL));
 	std::default_random_engine rng(rand());
-	const float STDEV = 1.5f;
+	const float STDEV = 1.4432f;
 	std::normal_distribution<float> gauss(0, STDEV);
 
 	for (int i = 0; i < 10; ++i) {
