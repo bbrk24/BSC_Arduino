@@ -1,7 +1,23 @@
+/*
+ * bufferCopy.h
+ *
+ *  Created on: Mar 4, 2024
+ *      Author: sethm
+ */
+
+#ifndef BUFFERCOPY_H_
+#define BUFFERCOPY_H_
+
+
 #pragma once
 
 #ifndef BUFFER_SIZE
-#define BUFFER_SIZE 200
+#define BUFFER_SIZE 20
+#endif
+
+#ifndef INFINITY
+#define HUGE_ENOUGH 1e300
+#define INFINITY ((HUGE_ENOUGH)*(HUGE_ENOUGH))
 #endif
 
 class Buffer {
@@ -24,7 +40,7 @@ public:
       }
       prevIndex = nextIndex;
     }
-    return decCount > BUFFER_SIZE/2;
+    return decCount > BUFFER_SIZE*0.4;
   }
   float maximum() const noexcept {
     float currMax = -INFINITY;
@@ -50,3 +66,7 @@ private:
   float m_data[BUFFER_SIZE];
   int m_lastIndex;
 };
+
+
+
+#endif /* BUFFERCOPY_H_ */

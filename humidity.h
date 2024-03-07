@@ -95,7 +95,14 @@ public:
       return true;
     }
 
-    sht4x_heater_t heater = recommendedHeatLevel();
+    // If the humidity sensor isn't being read, there's no point in heating
+    // Heating makes the humidity more reliable but artificially increases temperature
+    sht4x_heater_t heater;
+    if (humidity == nullptr) {
+      heater = SHT4X_NO_HEATER;
+    } else {
+      heater = recommendedHeatLevel();
+    }
     m_sensor.setHeater(heater);
 
     bool success;

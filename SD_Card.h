@@ -6,14 +6,67 @@
 
 #pragma once
 
+#ifndef CAPSULE
+#pragma GCC error "CAPSULE is not defined. Please define it to either 1 or 2."
+#elif CAPSULE == 1
+#pragma message "Compiling for capsule 1 (camera)..."
+#elif CAPSULE == 2
+#pragma message "Compiling for capsule 2 (atmospheric sensing)..."
+#else
+#pragma GCC error "Unexpected value for CAPSULE (expected 1 or 2)"
+#endif
+
 class SDCard {
   private:
     File m_sdCardFile;
+    char m_fileName[13]; // 12 characters + null terminator
     bool m_begun; // SPI communications have been established
     bool m_proven; // The self-test passed
 
     static const int M_CHIP_SELECT = SDCARD_SS_PIN;
-    static constexpr const char* M_FILE_NAME = "CAPS_INF.CSV";
+    static constexpr const char* M_FILE_NAME = "CAPS_INF";
+    static constexpr const char* M_FILE_EXT = ".CSV";
+
+    static constexpr const char* M_HEADERS =
+      "Latitude,Longitude,Altitude (MSL),Satellites,Timestamp,Accel X,Accel Y,Accel Z,Altitude (AGL),"
+      // Fun C fact: if you have multiple string literals with nothing but comments and whitespace
+      // between them, the compiler treats them as one long string literal
+#if CAPSULE == 2
+      "VOC Reading,Humidity,Temperature,"
+#endif
+      "Gyro X,Gyro Y,Gyro Z";
+
+    // Finds an available filename and sets m_fileName accordingly.
+    void findFileName() {
+      // First, check if the base file name is available
+      strcpy(m_fileName, M_FILE_NAME);
+      strcat(m_fileName, M_FILE_EXT);
+      if (!SD.exists(m_fileName)) {
+        return;
+      }
+
+      // Then, try it with numbers
+      const size_t BASENAME_LENGTH = strlen(M_FILE_NAME);
+      for (int i = 0; i <= 99999999; ++i) {
+        // Convert the number to a C-style string (= char[])
+        char buf[9];
+        sprintf(buf, "%d", i);
+        // Overwrite just the end of the filename with the number
+        // e.g. CAPS_INF + 13 => CAPS_I13
+        size_t bufLen = strlen(buf);
+        memcpy(m_fileName + BASENAME_LENGTH - bufLen, buf, bufLen);
+        if (!SD.exists(m_fileName)) {
+          return;
+        }
+      }
+
+      // We're out of filenames, somehow...
+      // Do we really have a hundred million files?
+      // Whatever, reset to the default and delete the file
+      strcpy(m_fileName, M_FILE_NAME);
+      strcat(m_fileName, M_FILE_EXT);
+      SD.remove(m_fileName);
+    }
 
     // Write some random data to a file and see if we can read it back
     bool selfTest() {
@@ -52,7 +105,7 @@ class SDCard {
       }
 
       File randomFile = SD.open(SELFTEST_FILE_NAME, FILE_WRITE);
-      randomFile.write(data);
+      randomFile.write(data, RANDOM_BUFFER_SIZE);
 
       // 3.
       randomFile.close();
@@ -69,13 +122,13 @@ class SDCard {
       randomFile.close();
       // If the data file was open before, re-open it
       if (open) {
-        m_sdCardFile = SD.open(M_FILE_NAME, FILE_WRITE);
+        m_sdCardFile = SD.open(m_fileName, FILE_WRITE);
       }
 
       return !areDifferent;
     }
   public:
-    SDCard() : m_sdCardFile(), m_begun(false), m_proven(false) {}
+    SDCard() : m_sdCardFile(), m_fileName{0}, m_begun(false), m_proven(false) {}
 
     enum Status {
       /** SPI communications have not yet been established. */
@@ -114,48 +167,37 @@ class SDCard {
       const volatile IMU::vector3& gyro) {
         // checks if SD card is open and good to be written to 
         if (m_sdCardFile) {
-          String dataOutputString = "";
-
-          dataOutputString += String(coords.latitude);
-          dataOutputString += ",";
-          dataOutputString += String(coords.longitude);
-          dataOutputString += ",";
-          dataOutputString += String(coords.altitudeMSL);
-          dataOutputString += ",";
-          dataOutputString += String(coords.numSatellites);
-          dataOutputString += ",";
-          dataOutputString += String(coords.timestamp.hours) + " : " + String(coords.timestamp.minutes) + " : " + String(coords.timestamp.seconds) + " : " + String(coords.timestamp.milliseconds);
-          dataOutputString += ",";
-
-          dataOutputString += String(accel.x);
-          dataOutputString += ",";
-          dataOutputString += String(accel.y);
-          dataOutputString += ",";
-          dataOutputString += String(accel.z);
-          dataOutputString += ",";
-
-          dataOutputString += String(altitude);
-
-          dataOutputString += ",";
-
+          char dataOutputString[126];
+          // 126 *should* be long enough for any valid data.
+          // However, unlike the radio packet, this isn't a fixed length.
+          // So, in case there's invalid data or I miscounted, use snprintf, which cuts off the output
+          // instead of corrupting data if the string is too long.
+          snprintf(
+            dataOutputString,
+            sizeof dataOutputString,
+            "%d,%d,%.5g,%hu,%u:%u:%u:%u,%.2f,%.2f,%.2f,%.2f,"
 #if CAPSULE == 2
-          dataOutputString += String(analogReading);
-
-          dataOutputString += ",";
-
-          dataOutputString += String(humidity);
-
-          dataOutputString += ",";
-
-          dataOutputString += String(temperature);
-
-          dataOutputString += ",";
+            "%d,%.2f,%.1f,"
 #endif
-          dataOutputString += String(gyro.x);
-          dataOutputString += ",";
-          dataOutputString += String(gyro.y);
-          dataOutputString += ",";
-          dataOutputString += String(gyro.z);
+            "%.3f,%.3f,%.3f",
+            coords.latitude,
+            coords.longitude,
+            (double)coords.altitudeMSL,
+            (unsigned short)coords.numSatellites,
+            coords.timestamp.hours, coords.timestamp.minutes, coords.timestamp.seconds, coords.timestamp.milliseconds,
+            (double)accel.x,
+            (double)accel.y,
+            (double)accel.z,
+            (double)altitude,
+#if CAPSULE == 2
+            analogReading,
+            (double)humidity,
+            (double)temperature,
+#endif
+            (double)gyro.x,
+            (double)gyro.y,
+            (double)gyro.z
+          );
 
           m_sdCardFile.println(dataOutputString);
         }
@@ -171,11 +213,31 @@ class SDCard {
       }
 
       if (m_proven && !m_sdCardFile) {
-        m_sdCardFile = SD.open(M_FILE_NAME, FILE_WRITE);
+        findFileName();
+        m_sdCardFile = SD.open(m_fileName, FILE_WRITE);
+        if (m_sdCardFile) {
+          m_sdCardFile.println(M_HEADERS);
+        }
       }
+    }
+
+    void writeHeaders(){
+      m_sdCardFile.println(M_HEADERS);
     }
 
     void closeFile() {
       m_sdCardFile.close();
+    }
+
+    /** Make sure data is saved to the SD card, then immediately re-open the file. */
+    void closeAndReopen() {
+      if (getStatus() != Status::ACTIVE) {
+        // The file was never opened in the first place. Make sure it's set up.
+        initialize();
+        return;
+      }
+
+      m_sdCardFile.close();
+      m_sdCardFile = SD.open(m_fileName, FILE_WRITE);
     }
 };
