@@ -148,7 +148,7 @@ void updateSDCardLEDs() {
   if (!ledsOn) { return; }
 
   bool good = card.getStatus() == SDCard::ACTIVE;
-  digitalWrite(5, good);
+  digitalWrite(10, good);
 }
 
 void saveDataToSD() {
@@ -287,8 +287,8 @@ void setup() {
   // Pin A6: analog input from VOC sensor
   pinMode(A6, PinMode::INPUT);
 #endif
-  // Pin D5: SD LEDs
-  pinMode(5, PinMode::OUTPUT);
+  // Pin D10: SD LEDs
+  pinMode(10, PinMode::OUTPUT);
   // Pin D6: GPS LEDs
   pinMode(6, PinMode::OUTPUT);
   // Pin D7: sensor LEDs
@@ -304,7 +304,7 @@ void setup() {
 #endif
 
   // Turn on the error LEDs until initialization finishes
-  digitalWrite(5, LOW);
+  digitalWrite(10, LOW);
   digitalWrite(6, LOW);
   digitalWrite(7, LOW);
 
@@ -320,7 +320,7 @@ void setup() {
       if (command == "start") {
         // disable LEDs
         ledsOn = false;
-        pinMode(5, PinMode::INPUT);
+        pinMode(10, PinMode::INPUT);
         pinMode(6, PinMode::INPUT);
         pinMode(7, PinMode::INPUT);
 
