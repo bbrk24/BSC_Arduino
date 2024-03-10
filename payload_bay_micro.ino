@@ -11,6 +11,18 @@ unsigned long lastRadioTime = 0;
 
 Altimeter alt;
 
+void sendToRadio(float altitude) {
+  char buf[11];
+  // '+': always print the sign character, even if it's + instead of -
+  // '0': pad the number with leading zeros if necessary (otherwise uses spaces)
+  // '9': the whole number is 9 characters (+23456.89)
+  // '.2': show two digits after the decimal point
+  // 'f': the number is a double (there is none for float)
+  sprintf(buf, "%+09.2f\n", (double)altitude);
+  lastRadioTime = micros();
+  Serial.print(buf);
+}
+
 void setup() {
   Serial.begin(230400);
 
@@ -29,10 +41,9 @@ void setup() {
       if (command == "start") {
         break;
       } else if (command == "transmit_data") {
-        lastRadioTime = micros();
-        Serial.println(alt.getAltitude());
+        sendToRadio(alt.getAltitude());
       } else {
-        Serial.println(0.0f);
+        sendToRadio(0.0f);
       }
     }
   }
@@ -68,10 +79,8 @@ void loop() {
     break;
   }
 
-  unsigned long time = micros();
-  if (time - lastRadioTime >= 1e6 / RADIO_FREQ) {
-    lastRadioTime = time;
-    Serial.println(data.lastValue());
+  if (micros() - lastRadioTime >= 1e6 / RADIO_FREQ) {
+    sendToRadio(data.lastValue());
   }
 }
 
