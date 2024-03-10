@@ -4,9 +4,16 @@
 #include "altimeter.h"
 #include "Buffer.h"
 
+// How often to signal the radio, in Hertz
+const unsigned long RADIO_FREQ = 20;
+// The last time the altitude was transmitted, in us
+unsigned long lastRadioTime = 0;
+
 Altimeter alt;
 
 void setup() {
+  Serial.begin(230400);
+
   pinMode(8, OUTPUT);
   digitalWrite(8, LOW); //Sets up pin 8 to be the signal to eject capsules
   pinMode(9, OUTPUT);
@@ -15,6 +22,20 @@ void setup() {
     alt.initialize();
   } while (alt.getStatus() != Altimeter::ACTIVE);
   digitalWrite(9, HIGH);
+  // Wait for radio command
+  while (true) {
+    if (Serial.available()) {
+      String command = Serial.readStringUntil('\n');
+      if (command == "start") {
+        break;
+      } else if (command == "transmit_data") {
+        lastRadioTime = micros();
+        Serial.println(alt.getAltitude());
+      } else {
+        Serial.println(0.0f);
+      }
+    }
+  }
 }
 
 enum Mode {
@@ -30,7 +51,7 @@ void loop() {
   switch (mode) {
   case BELOW_5K:
     delay(1000); //Wait 1 second
-    if (alt.getAltitude() >= 30.0F) {
+    if (alt.getAltitude() >= 5000.0F) {
       mode = WATCHING;
     }
     break;
@@ -42,8 +63,15 @@ void loop() {
     }
     break;
   case PAST_APOGEE:
-    // nothing to do
+    // Track the altitude just for the radio
+    data.addPoint(alt.getAltitude());
     break;
+  }
+
+  unsigned long time = micros();
+  if (time - lastRadioTime >= 1e6 / RADIO_FREQ) {
+    lastRadioTime = time;
+    Serial.println(data.lastValue());
   }
 }
 

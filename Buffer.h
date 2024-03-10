@@ -13,6 +13,14 @@ public:
     m_lastIndex = (m_lastIndex + 1) % BUFFER_SIZE;
   }
 
+  float lastValue() const noexcept {
+    if (m_lastIndex == 0) {
+      return m_data[BUFFER_SIZE - 1];
+    } else {
+      return m_data[m_lastIndex - 1];
+    }
+  }
+
   bool isDecreasing() const noexcept {
     int firstIndex = (m_lastIndex + 1) % BUFFER_SIZE;
     int prevIndex = firstIndex;
