@@ -59,15 +59,19 @@ void loop() {
   static Buffer data;
   static Mode mode = BELOW_5K;
 
+  float altitude;
+
   switch (mode) {
   case BELOW_5K:
     delay(1000); //Wait 1 second
-    if (alt.getAltitude() >= 5000.0F) {
+    altitude = alt.getAltitude();
+    if (altitude >= 5000.0F) {
       mode = WATCHING;
     }
     break;
   case WATCHING:
-    data.addPoint(alt.getAltitude());
+    altitude = alt.getAltitude();
+    data.addPoint(altitude);
     if (data.isDecreasing()) { //If we notice our altitude is decreasing, we've reached apogee
       digitalWrite(8, HIGH); //Flip ejection pin high
       mode = PAST_APOGEE; //Put us in 'PAST_APOGEE' mode
@@ -75,12 +79,12 @@ void loop() {
     break;
   case PAST_APOGEE:
     // Track the altitude just for the radio
-    data.addPoint(alt.getAltitude());
+    altitude = alt.getAltitude();
     break;
   }
 
   if (micros() - lastRadioTime >= 1e6 / RADIO_FREQ) {
-    sendToRadio(data.lastValue());
+    sendToRadio(altitude);
   }
 }
 
