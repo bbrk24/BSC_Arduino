@@ -119,42 +119,35 @@ void SERCOM3_Handler(void) {
 }
 } // extern "C"
 
-void updateSensorLEDs() {
+#if CAPSULE == 2
+void updateTempHumidLEDs() {
   if (!ledsOn) { return; }
 
-  IMU::Status imuStatus = imu.getStatus();
-  Altimeter::Status altimeterStatus = alt.getStatus();
-#if CAPSULE == 2
   HumiditySensor::Status humidityStatus = hum.getStatus();
-#endif
-  bool good =
-    altimeterStatus == Altimeter::ACTIVE
-    && imuStatus == IMU::ACTIVE
-#if CAPSULE == 2
-    && humidityStatus == HumiditySensor::ACTIVE
-#endif
-  ;
-  digitalWrite(7, good);
-}
-
-void updateGPSLEDs() {
-  if (!ledsOn) { return; }
-
-  bool good = gps.getStatus() == GPS::ACTIVE;
+  bool good =  humidityStatus == HumiditySensor::ACTIVE;
   digitalWrite(6, good);
 }
+#endif
 
-void updateSDCardLEDs() {
+void updateMissionCriticalLEDs() {
   if (!ledsOn) { return; }
 
-  bool good = card.getStatus() == SDCard::ACTIVE;
-  digitalWrite(10, good);
+  GPS::Status gpsStatus = gps.getStatus();
+  IMU::Status imuStatus = imu.getStatus();
+  Altimeter::Status altimeterStatus = alt.getStatus();
+  SDCard::Status sdCardStatus = card.getStatus();
+
+  bool good = gpsStatus == GPS::ACTIVE
+    && imuStatus == IMU::ACTIVE
+    && altimeterStatus == Altimeter::ACTIVE
+    && sdCardStatus == SDCard::ACTIVE;
+  digitalWrite(7, good);
 }
 
 void saveDataToSD() {
   if (card.getStatus() != SDCard::ACTIVE) {
     card.initialize();
-    updateSDCardLEDs();
+    updateMissionCriticalLEDs();
   }
   card.writeToCSV(
     last_coords,
@@ -171,18 +164,16 @@ void saveDataToSD() {
 
 // Try to initialize all sensors. Has no effect once everything is initialized.
 void initializeAll() {
-  alt.initialize(&altI2C);
-  imu.initialize();
 #if CAPSULE == 2
   hum.initialize();
+  updateTempHumidLEDs();
 #endif
-  updateSensorLEDs();
 
+  alt.initialize(&altI2C);
+  imu.initialize();
   card.initialize();
-  updateSDCardLEDs();
-
   gps.initialize();
-  updateGPSLEDs();
+  updateMissionCriticalLEDs();
 }
 
 // Convenience functions for reading sensor data
@@ -192,7 +183,7 @@ void readAtmospheric() {
 
   if (hum.getStatus() != HumiditySensor::ACTIVE) {
     hum.initialize();
-    updateSensorLEDs();
+    updateTempHumidLEDs();
   }
 
   hum.getValues(&last_humid, &last_temp);
@@ -202,7 +193,7 @@ void readAtmospheric() {
 void readGPS() {
   if (gps.getStatus() != GPS::ACTIVE) {
     gps.initialize();
-    updateGPSLEDs();
+    updateMissionCriticalLEDs();
   }
 
   gps.getLocation(&last_coords);
@@ -211,7 +202,7 @@ void readGPS() {
 void readAltIMU() {
   if (imu.getStatus() != IMU::ACTIVE) {
     imu.initialize();
-    updateSensorLEDs();
+    updateMissionCriticalLEDs();
   }
 
   // This has to be done like this because imu.getValues cannot take a pointer to a volatile vector3
@@ -223,7 +214,7 @@ void readAltIMU() {
 
   if (alt.getStatus() != Altimeter::ACTIVE) {
     alt.initialize(&altI2C);
-    updateSensorLEDs();
+    updateMissionCriticalLEDs();
   }
 
   if (alt.getStatus() == Altimeter::ACTIVE) {
@@ -286,12 +277,10 @@ void setup() {
 #if CAPSULE == 2
   // Pin A6: analog input from VOC sensor
   pinMode(A6, PinMode::INPUT);
-#endif
-  // Pin D10: SD LEDs
-  pinMode(10, PinMode::OUTPUT);
-  // Pin D6: GPS LEDs
+  // Pin D6: temp/humidity sensor LEDs
   pinMode(6, PinMode::OUTPUT);
-  // Pin D7: sensor LEDs
+#endif
+  // Pin D7: mission-critical LEDs
   pinMode(7, PinMode::OUTPUT);
 
   pinPeripheral(0, PIO_SERCOM);
@@ -304,8 +293,9 @@ void setup() {
 #endif
 
   // Turn on the error LEDs until initialization finishes
-  digitalWrite(10, LOW);
+#if CAPSULE == 2
   digitalWrite(6, LOW);
+#endif
   digitalWrite(7, LOW);
 
   // Wait for a command from the radio. Sometimes the sensors need multiple tries, and calling
@@ -320,8 +310,9 @@ void setup() {
       if (command == "start") {
         // disable LEDs
         ledsOn = false;
-        pinMode(10, PinMode::INPUT);
+#if CAPSULE == 2
         pinMode(6, PinMode::INPUT);
+#endif
         pinMode(7, PinMode::INPUT);
 
         break;
