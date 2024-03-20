@@ -11,14 +11,40 @@ unsigned long lastRadioTime = 0;
 
 Altimeter alt;
 
-void sendToRadio(float altitude) {
-  char buf[11];
+constexpr float mapFloat(
+  float value,
+  float xMin, float xMax,
+  float yMin, float yMax
+) noexcept {
+  return (yMax - yMin) / (xMax - xMin) * (value - xMin) + yMin;
+}
+
+float readTankPressure() {
+  int rawADCReading = analogRead(1);
+  float voltage = 5.0F/1023.0F * rawADCReading;
+  // 0.5V = 0MPa, 4.5V = 3MPa, linear
+  float pressureMPa = mapFloat(voltage, 0.5F, 4.5F, 0.0F, 3.0F);
+  const float PSI_PER_MPA = 145.03774F;
+  return pressureMPa * PSI_PER_MPA;
+}
+
+void sendToRadio(float altitude, float tankPressure, bool ejected) {
+  char buf[19];
   // '+': always print the sign character, even if it's + instead of -
   // '0': pad the number with leading zeros if necessary (otherwise uses spaces)
   // '9': the whole number is 9 characters (+23456.89)
   // '.2': show two digits after the decimal point
   // 'f': the number is a double (there is none for float)
-  sprintf(buf, "%+09.2f\n", (double)altitude);
+  // '05.1f': similar concept to above, but the number is always positive so the sign character isn't needed
+  // 'd': number as decimal integer, using as few digits as possible
+  snprintf(
+    buf,
+    sizeof buf,
+    "%+09.2f,%05.1f,%d\n",
+    (double)altitude,
+    max(0.0, (double)tankPressure),
+    ejected ? 1 : 0
+  );
   lastRadioTime = micros();
   Serial.print(buf);
 }
@@ -26,6 +52,7 @@ void sendToRadio(float altitude) {
 void setup() {
   Serial.begin(230400);
 
+  pinMode(A1, INPUT);
   pinMode(8, OUTPUT);
   digitalWrite(8, LOW); //Sets up pin 8 to be the signal to eject capsules
   pinMode(9, OUTPUT);
@@ -41,9 +68,9 @@ void setup() {
       if (command == "start") {
         break;
       } else if (command == "transmit_data") {
-        sendToRadio(alt.getAltitude());
+        sendToRadio(alt.getAltitude(), readTankPressure(), false);
       } else {
-        sendToRadio(0.0f);
+        sendToRadio(0.0f, 0.0f, false);
       }
     }
   }
@@ -84,7 +111,7 @@ void loop() {
   }
 
   if (micros() - lastRadioTime >= 1e6 / RADIO_FREQ) {
-    sendToRadio(altitude);
+    sendToRadio(altitude, readTankPressure(), mode == PAST_APOGEE);
   }
 }
 
