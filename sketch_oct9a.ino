@@ -125,7 +125,7 @@ void updateTempHumidLEDs() {
 
   HumiditySensor::Status humidityStatus = hum.getStatus();
   bool good =  humidityStatus == HumiditySensor::ACTIVE;
-  digitalWrite(6, good);
+  digitalWrite(4, good);
 }
 #endif
 
@@ -294,7 +294,7 @@ void setup() {
 
   // Turn on the error LEDs until initialization finishes
 #if CAPSULE == 2
-  digitalWrite(6, LOW);
+  digitalWrite(4, LOW);
 #endif
   digitalWrite(7, LOW);
 
