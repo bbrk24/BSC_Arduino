@@ -278,7 +278,7 @@ void setup() {
   // Pin A6: analog input from VOC sensor
   pinMode(A6, PinMode::INPUT);
   // Pin D6: temp/humidity sensor LEDs
-  pinMode(6, PinMode::OUTPUT);
+  pinMode(4, PinMode::OUTPUT);
 #endif
   // Pin D7: mission-critical LEDs
   pinMode(7, PinMode::OUTPUT);
@@ -311,7 +311,7 @@ void setup() {
         // disable LEDs
         ledsOn = false;
 #if CAPSULE == 2
-        pinMode(6, PinMode::INPUT);
+        pinMode(4, PinMode::INPUT);
 #endif
         pinMode(7, PinMode::INPUT);
 
