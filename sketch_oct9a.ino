@@ -125,7 +125,7 @@ void updateTempHumidLEDs() {
 
   HumiditySensor::Status humidityStatus = hum.getStatus();
   bool good =  humidityStatus == HumiditySensor::ACTIVE;
-  digitalWrite(6, good);
+  digitalWrite(4, good);
 }
 #endif
 
@@ -277,8 +277,8 @@ void setup() {
 #if CAPSULE == 2
   // Pin A6: analog input from VOC sensor
   pinMode(A6, PinMode::INPUT);
-  // Pin D6: temp/humidity sensor LEDs
-  pinMode(6, PinMode::OUTPUT);
+  // Pin D4: temp/humidity sensor LEDs
+  pinMode(4, PinMode::OUTPUT);
 #endif
   // Pin D7: mission-critical LEDs
   pinMode(7, PinMode::OUTPUT);
@@ -294,7 +294,7 @@ void setup() {
 
   // Turn on the error LEDs until initialization finishes
 #if CAPSULE == 2
-  digitalWrite(6, LOW);
+  digitalWrite(4, LOW);
 #endif
   digitalWrite(7, LOW);
 
@@ -311,7 +311,7 @@ void setup() {
         // disable LEDs
         ledsOn = false;
 #if CAPSULE == 2
-        pinMode(6, PinMode::INPUT);
+        pinMode(4, PinMode::INPUT);
 #endif
         pinMode(7, PinMode::INPUT);
 
