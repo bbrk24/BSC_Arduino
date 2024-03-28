@@ -4,6 +4,10 @@
 #include "altimeter.h"
 #include "Buffer.h"
 
+// Set this to "true" to allow the radio to force ejection
+// Only turn this on during testing -- this should be "false" on the rocket!
+#define EJECT_COMMAND false
+
 // How often to signal the radio, in Hertz
 const unsigned long RADIO_FREQ = 20;
 // The last time the altitude was transmitted, in us
@@ -69,6 +73,39 @@ void setup() {
         break;
       } else if (command == "transmit_data") {
         sendToRadio(alt.getAltitude(), readTankPressure(), false);
+      } else if (command == "fill") {
+        // Send data without doing anything else until told to stop
+        // Used to monitor tank pressure while filling
+        while (true) {
+          sendToRadio(0.0f, readTankPressure(), false);
+          if (Serial.available()) {
+            String newCommand = Serial.readStringUntil('\n');
+            if (newCommand == "fill") {
+              break;
+            }
+          }
+          delay(1000 / RADIO_FREQ);
+        }
+#if EJECT_COMMAND
+      } else if (command == "eject") {
+        // Send data until we get a second "eject" command
+        while (true) {
+          sendToRadio(alt.getAltitude(), readTankPressure(), false);
+          if (Serial.available()) {
+            String newCommand = Serial.readStringUntil('\n');
+            if (newCommand == "eject") {
+              break;
+            }
+          }
+          delay(1000 / RADIO_FREQ);
+        }
+        // Turn on the relay and go back to sending data
+        digitalWrite(8, HIGH);
+        while (true) {
+          sendToRadio(alt.getAltitude(), readTankPressure(), true);
+          delay(1000 / RADIO_FREQ);
+        }
+#endif
       } else {
         sendToRadio(0.0f, 0.0f, false);
       }
@@ -90,7 +127,7 @@ void loop() {
 
   switch (mode) {
   case BELOW_5K:
-    delay(1000); //Wait 1 second
+    delay(1000 / RADIO_FREQ);
     altitude = alt.getAltitude();
     if (altitude >= 5000.0F) {
       mode = WATCHING;
