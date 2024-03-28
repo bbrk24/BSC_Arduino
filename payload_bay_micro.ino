@@ -24,7 +24,7 @@ constexpr float mapFloat(
 }
 
 float readTankPressure() {
-  int rawADCReading = analogRead(1);
+  int rawADCReading = analogRead(2);
   float voltage = 5.0F/1023.0F * rawADCReading;
   // 0.5V = 0MPa, 4.5V = 3MPa, linear
   float pressureMPa = mapFloat(voltage, 0.5F, 4.5F, 0.0F, 3.0F);
@@ -56,9 +56,9 @@ void sendToRadio(float altitude, float tankPressure, bool ejected) {
 void setup() {
   Serial.begin(230400);
 
-  pinMode(A1, INPUT);
+  pinMode(A2, INPUT);
   pinMode(8, OUTPUT);
-  digitalWrite(8, LOW); //Sets up pin 8 to be the signal to eject capsules
+  digitalWrite(8, HIGH); //Sets up pin 8 to be the signal to eject capsules
   pinMode(9, OUTPUT);
   digitalWrite(9, LOW); // Sets up pin 9 for status LEDs
   do { //Until the altimeter is active, attempt to initialize
@@ -100,7 +100,7 @@ void setup() {
           delay(1000 / RADIO_FREQ);
         }
         // Turn on the relay and go back to sending data
-        digitalWrite(8, HIGH);
+        digitalWrite(8, LOW);
         while (true) {
           sendToRadio(alt.getAltitude(), readTankPressure(), true);
           delay(1000 / RADIO_FREQ);
@@ -137,7 +137,7 @@ void loop() {
     altitude = alt.getAltitude();
     data.addPoint(altitude);
     if (data.isDecreasing()) { //If we notice our altitude is decreasing, we've reached apogee
-      digitalWrite(8, HIGH); //Flip ejection pin high
+      digitalWrite(8, LOW); //Flip ejection pin low
       mode = PAST_APOGEE; //Put us in 'PAST_APOGEE' mode
     }
     break;
