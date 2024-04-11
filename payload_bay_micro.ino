@@ -1,11 +1,11 @@
 // When uploading to the payload bay micro, change this to true and the other INO to false
-#if true
+#if false
 #include "altimeter.h"
 #include "Buffer.h"
 
 // Set this to "true" to allow the radio to force ejection
 // Only turn this on during testing -- this should be "false" on the rocket!
-#define EJECT_COMMAND true
+#define EJECT_COMMAND false
 
 // How often to signal the radio, in Hertz
 const unsigned long RADIO_FREQ = 20;
