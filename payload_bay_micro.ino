@@ -1,6 +1,5 @@
 // When uploading to the payload bay micro, change this to true and the other INO to false
 #if false
-
 #include "altimeter.h"
 #include "Buffer.h"
 
@@ -34,42 +33,36 @@ float readTankPressure() {
 
 void sendToRadio(float altitude, float tankPressure, bool ejected) {
   char buf[19];
-  // '+': always print the sign character, even if it's + instead of -
-  // '0': pad the number with leading zeros if necessary (otherwise uses spaces)
-  // '9': the whole number is 9 characters (+23456.89)
-  // '.2': show two digits after the decimal point
-  // 'f': the number is a double (there is none for float)
-  // '05.1f': similar concept to above, but the number is always positive so the sign character isn't needed
-  // 'd': number as decimal integer, using as few digits as possible
   snprintf(
     buf,
     sizeof buf,
-    "%+09.2f,%05.1f,%d\n",
-    (double)altitude,
-    max(0.0, (double)tankPressure),
-    ejected ? 1 : 0
+    "%+06d,%03d,%d\n",
+    (int)altitude,
+    max(0, (int)tankPressure),
+    ejected ? 0 : 1
   );
   lastRadioTime = micros();
-  Serial.print(buf);
+  Serial1.print(buf);
 }
 
 void setup() {
-  Serial.begin(230400);
+  Serial1.begin(57600, SERIAL_8N2);
 
   pinMode(A2, INPUT);
   pinMode(8, OUTPUT);
   digitalWrite(8, HIGH); //Sets up pin 8 to be the signal to eject capsules
   pinMode(9, OUTPUT);
-  digitalWrite(9, LOW); // Sets up pin 9 for status LEDs
+  // digitalWrite(9, LOW); // Sets up pin 9 for status LEDs
   do { //Until the altimeter is active, attempt to initialize
     alt.initialize();
   } while (alt.getStatus() != Altimeter::ACTIVE);
-  digitalWrite(9, HIGH);
+  // digitalWrite(9, HIGH);
   // Wait for radio command
   while (true) {
-    if (Serial.available()) {
-      String command = Serial.readStringUntil('\n');
+    if (Serial1.available()) {
+      String command = Serial1.readStringUntil('\n');
       if (command == "start") {
+        digitalWrite(9, HIGH);
         break;
       } else if (command == "transmit_data") {
         sendToRadio(alt.getAltitude(), readTankPressure(), false);
@@ -78,8 +71,8 @@ void setup() {
         // Used to monitor tank pressure while filling
         while (true) {
           sendToRadio(0.0f, readTankPressure(), false);
-          if (Serial.available()) {
-            String newCommand = Serial.readStringUntil('\n');
+          if (Serial1.available()) {
+            String newCommand = Serial1.readStringUntil('\n');
             if (newCommand == "fill") {
               break;
             }
@@ -91,8 +84,8 @@ void setup() {
         // Send data until we get a second "eject" command
         while (true) {
           sendToRadio(alt.getAltitude(), readTankPressure(), false);
-          if (Serial.available()) {
-            String newCommand = Serial.readStringUntil('\n');
+          if (Serial1.available()) {
+            String newCommand = Serial1.readStringUntil('\n');
             if (newCommand == "eject") {
               break;
             }
