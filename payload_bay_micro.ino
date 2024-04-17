@@ -12,6 +12,10 @@ const unsigned long RADIO_FREQ = 20;
 // The last time the altitude was transmitted, in us
 unsigned long lastRadioTime = 0;
 
+bool turnedOff = true;
+
+unsigned long time;
+
 Altimeter alt;
 
 constexpr float mapFloat(
@@ -117,6 +121,7 @@ void loop() {
   static Mode mode = BELOW_5K;
 
   float altitude;
+  
 
   switch (mode) {
   case BELOW_5K:
@@ -130,12 +135,18 @@ void loop() {
     altitude = alt.getAltitude();
     data.addPoint(altitude);
     if (data.isDecreasing()) { //If we notice our altitude is decreasing, we've reached apogee
+      time = millis();
+      turnedOff = false;
       digitalWrite(8, LOW); //Flip ejection pin low
       mode = PAST_APOGEE; //Put us in 'PAST_APOGEE' mode
     }
     break;
   case PAST_APOGEE:
     // Track the altitude just for the radio
+    if (!turnedOff && ((millis() - time) > 10000)){ //greater than 10 seconds
+      turnedOff = true;
+      digitalWrite(8, HIGH);
+    }
     altitude = alt.getAltitude();
     break;
   }
